@@ -1,0 +1,16 @@
+*.claude
+*.log
+*.tmp
+
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+.env
+
+agent/data/
+
+logs/
+
