@@ -1,6 +1,6 @@
 from langchain_core.messages import SystemMessage
 
-from config.llm import llm
+from config.llm import llm_no_stream
 from config.logger import logger
 from config.prompt import INTENT_PROMPT
 
@@ -13,7 +13,7 @@ async def intent_node(state):
     """
     # 一、意图分类
     # 1、调用 LLM，prompt 要求仅回复 CHAT 或 REFUSE
-    response = await llm.ainvoke([
+    response = await llm_no_stream.ainvoke([
         SystemMessage(content=INTENT_PROMPT),
         state.messages[-1],
     ])

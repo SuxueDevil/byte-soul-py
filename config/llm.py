@@ -10,3 +10,11 @@ llm = ChatOpenAI(
     base_url=settings.llm_base_url,
     streaming=True,
 )
+
+# 2、非流式实例，供意图分类等不需要流式输出的场景使用
+llm_no_stream = ChatOpenAI(
+    model=settings.llm_model,
+    api_key=settings.llm_api_key,
+    base_url=settings.llm_base_url,
+    streaming=False,
+)
