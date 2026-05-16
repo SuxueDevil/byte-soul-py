@@ -2,12 +2,22 @@ from __future__ import annotations
 from typing import Optional, Literal
 from pydantic import BaseModel, Field
 
-
 class ChatRequest(BaseModel):
-    """聊天接口请求体"""
-    user_id: str = Field()
-    message: str
 
+    class Message(BaseModel):
+        """OpenAI 消息"""
+        role: Literal["system", "user", "assistant"]
+        content: str
+
+    """OpenAI chat.completions 请求体"""
+    # 对话消息列表，支持多轮上下文
+    messages: list[Message]
+    # 是否流式返回，默认 True
+    stream: bool = True
+    # 用户标识，映射到 thread_id 实现记忆链，OpenAI API 标准字段就是 user，不是 user_id
+    user: str = Field()
+    # 可选模型名，方便客户端指定或切换模型
+    model: Optional[str] = None
 
 class ChatChunk(BaseModel):
     """SSE 响应块"""
