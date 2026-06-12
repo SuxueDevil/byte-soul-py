@@ -20,9 +20,6 @@ class AsyncSqliteMemory:
 
     def __init__(self):
         os.makedirs(os.path.dirname(settings.sqlite_url), exist_ok=True)
-        # 一、初始化异步 SQLite 连接
-        # 1、aiosqlite.connect() 同步返回连接对象
-        # 2、AsyncSqliteSaver 内部调用 get_running_loop()，需用 asyncio.run 提供临时事件循环
         async def init_conn():
             return AsyncSqliteSaver(conn=await aiosqlite.connect(settings.sqlite_url))
         self.checkpointer = asyncio.run(init_conn())

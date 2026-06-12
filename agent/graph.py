@@ -4,6 +4,7 @@ from .checkpointer import checkpointer
 from .nodes.chat_node import chat_node
 from .nodes.intent_node import intent_node
 from .nodes.refuse_node import refuse_node
+from .nodes.retriever_node import retriever_node
 from .state import AgentState
 
 
@@ -14,7 +15,7 @@ class AgentGraphBuilder:
         """
         根据意图分类结果路由到对应节点。
         @param state: 当前 Agent 状态
-        @return: 目标节点名（chat 或 refuse）
+        @return: 目标节点名（retriever 或 refuse）
         """
         return state.intent
 
@@ -26,20 +27,22 @@ class AgentGraphBuilder:
         # 一、构建状态图
         # 1、创建 StateGraph
         state_graph = StateGraph(AgentState)
-        # 2、添加节点：意图分类 → 对话生成 → 终审拦截
+        # 2、添加节点：意图分类 → RAG检索 → 对话生成 → 终审拦截
         state_graph.add_node("intent", intent_node)
+        state_graph.add_node("retriever", retriever_node)
         state_graph.add_node("chat", chat_node)
         state_graph.add_node("refuse", refuse_node)
 
         # 二、配置路由
         # 1、入口节点
         state_graph.set_entry_point("intent")
-        # 2、条件边：根据 intent 结果路由到 chat 或 refuse
+        # 2、条件边：根据 intent 结果路由到 retriever 或 refuse
         state_graph.add_conditional_edges(
             "intent", self.route_decision,
-            {"chat": "chat", "refuse": "refuse"},
+            {"chat": "retriever", "refuse": "refuse"},
         )
-        # 3、无条件边：chat → refuse → END
+        # 3、无条件边：retriever → chat → refuse → END
+        state_graph.add_edge("retriever", "chat")
         state_graph.add_edge("chat", "refuse")
         state_graph.add_edge("refuse", END)
 
