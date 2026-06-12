@@ -1,5 +1,5 @@
 [project]
-name = "api-demo"
+name = "bytesoul"
 version = "0.1.0"
 description = "A FastAPI demo with controller-service-pojo structure"
 requires-python = ">=3.10"

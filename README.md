@@ -1,3 +1,7 @@
+# ByteSoul
+
+字节灵魂 — RAG 助手
+
 ## 安装依赖
 uv sync
 

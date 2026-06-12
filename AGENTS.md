@@ -2,7 +2,7 @@
 
 ## 概述
 
-FastAPI + LangGraph 医疗 AI Agent 演示项目。Python ≥3.10，使用 **uv** 管理依赖。
+FastAPI + LangGraph RAG 助手，代号 **ByteSoul**。Python ≥3.10，使用 **uv** 管理依赖。
 
 ## 命令
 
@@ -42,8 +42,8 @@ agent/
 
 - **配置加载**：`config.settings.settings` — 所有配置通过 pyyaml 从 `config.yaml` 读取。运行前需复制 `config.yaml.example` 为 `config.yaml` 并填写实际值。可通过 `CONFIG_FILE` 环境变量指定其他路径。
 - **数据库会话**：始终使用 `async with database.session() as db:` — 上下文管理器自动关闭连接。
-- **Agent 流程**：`intent_node` 分类医疗/非医疗 → 路由到 `chat_node`（LLM 流式生成）或 `refuse_node`（固定拒绝）。所有消息最终都经过 `refuse_node` 作为终审节点。
-- **已知 Bug**：`intent_node` 将 `state.intent` 设为 `"chat"` 或 `"refuse"`，但 `refuse_node` 检查的是 `state.intent != "medical"` — 导致拒绝消息无论意图如何都会被追加。修复方式：统一 intent 值或修正判断条件。
+- **Agent 流程**：当前为 `intent_node`（意图分类）→ `chat_node`（LLM 流式生成）→ `refuse_node`（终审拦截），后续将重构为 RAG 助手架构。
+- **已知 Bug**：`refuse_node` 检查 `state.intent != "medical"` 与 `intent_node` 输出的 `"chat"`/`"refuse"` 不匹配，拒绝消息始终追加。重构 RAG 时会一并清理。
 - **SSE 流式输出**：`AgentService.chat()` 通过 `agent.astream_events(version="v2")` 产出 `ChatChunk`，由 `OpenAIStreamResponse` 封装为 `data: {...}\n\n` 帧，末尾发送 `data: [DONE]\n\n`。
 - **线程记忆**：`ChatRequest` 中的 `user` 字段映射到 LangGraph 的 `thread_id`。不传则自动生成匿名临时 ID。
 - **Checkpointer**：在导入时由 `checkpointer_model` 配置项决定（默认 `async_sqlite`）。SQLite 文件自动创建于 `agent/data/` 下。
