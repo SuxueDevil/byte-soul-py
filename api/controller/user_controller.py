@@ -1,7 +1,7 @@
 from fastapi import APIRouter
 
 from api.schemas.response import Response
-from api.schemas.user import UserDTO
+from api.schemas.user import UserDTO,UserVO
 from api.service.user_service import UserService
 
 user_router = APIRouter(prefix="/users", tags=["用户管理"])

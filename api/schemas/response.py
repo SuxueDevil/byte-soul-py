@@ -18,8 +18,7 @@ class Response(BaseModel):
     def error(cls, message: str = "error", code: int = 500, data: Any = None) -> "Response":
         """构建错误响应"""
         return cls(code=code, message=message, data=data)
-
-
+    
 class ResponsePage(BaseModel):
     """分页响应体"""
     code: int = Field(200, description="状态码")
