@@ -14,8 +14,8 @@ class ChatRequest(BaseModel):
     messages: list[Message]
     # 是否流式返回，默认 True
     stream: bool = True
-    # 用户标识，映射到 thread_id 实现记忆链，OpenAI API 标准字段就是 user，不是 user_id
-    user: str = Field()
+    # 用户标识，映射到 thread_id 实现记忆链。OpenAI 可选字段，不传则自动生成
+    user: Optional[str] = None
     # 可选模型名，方便客户端指定或切换模型
     model: Optional[str] = None
 

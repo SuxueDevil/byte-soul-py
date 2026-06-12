@@ -1,4 +1,5 @@
 import time
+import uuid
 
 from langchain_core.messages import HumanMessage, AIMessage
 from api.schemas.chat import ChatChunk, ChatRequest
@@ -27,12 +28,13 @@ class AgentService:
         @yield: ChatChunk 实例
         """
         # 一、构建运行配置
-        # 1、user 映射到 thread_id，同一用户共享一条 Thread，持久化记忆链
-        config = {"configurable": {"thread_id": request.user}}
+        # 1、user 映射到 thread_id，同一用户共享一条 Thread；未传则自动生成，不持久化
+        user_id = request.user or f"anon-{uuid.uuid4().hex[:8]}"
+        config = {"configurable": {"thread_id": user_id}}
 
         # 二、OpenAI 事件公共字段
-        # 1、chat_id 使用前端传入的 user 标识，同一用户多次请求共享此 ID
-        chat_id = request.user
+        # 1、id 回传 user 或自动生成的标识
+        chat_id = user_id
         # 2、created 为请求创建时的 Unix 时间戳（秒），同一请求所有帧共享
         created = int(time.time())
         # 3、客户端可指定模型，未指定则用默认值
