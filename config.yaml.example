@@ -74,3 +74,44 @@ checkpointer:
   # PostgreSQL 连接串（仅 model=postgres 时需要）
   # 格式：postgresql://user:password@host:port/database
   pg_url: postgresql://user:pass@localhost/db
+
+# ------------------------------------------------------------
+# RAG 多路检索配置
+# ------------------------------------------------------------
+rag:
+  # 文档分块
+  chunk_size: 500
+  chunk_overlap: 50
+
+  # 嵌入模型（默认复用 LLM 配置）
+  embedding:
+    model: text-embedding-v3
+    # api_key: sk-your-api-key      # 不填则复用 llm.api_key
+    # base_url: https://...          # 不填则复用 llm.base_url
+
+  # 向量存储
+  vectorstore:
+    type: chroma
+    persist_directory: data/vectorstore
+
+  # 检索配置
+  retrieval:
+    top_k: 5
+    score_threshold: 0.7
+
+  # 检索前：查询优化
+  pre_retrieval:
+    enable_rewrite: true       # 查询改写
+    enable_expansion: true     # 查询扩展
+    expansion_count: 3         # 扩展查询数量
+    enable_hyde: false         # 假设性文档嵌入
+
+  # 检索中：多路检索
+  mid_retrieval:
+    enable_bm25: true          # BM25 关键词检索
+    enable_compression: true   # 上下文压缩
+
+  # 检索后：融合精排
+  post_retrieval:
+    enable_reranker: true      # Cross-Encoder 重排序
+    reranker_model: BAAI/bge-reranker-v2-m3
