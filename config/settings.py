@@ -39,7 +39,7 @@ class Settings:
         # 四、Checkpointer
         cp = cfg["checkpointer"]
         self.checkpointer_model: str = cp["model"]
-        self.sqlite_url: str = cp.get("sqlite_url", "agent/data/agent.db")
+        self.sqlite_url: str = cp.get("sqlite_url", "data/agent.db")
         self.pg_url: str = cp.get("pg_url", "")
 
 

@@ -1,4 +1,4 @@
-from typing import Annotated
+from typing import Annotated, Literal
 
 from langgraph.graph.message import add_messages
 from pydantic import BaseModel, Field
@@ -10,5 +10,10 @@ class AgentState(BaseModel):
     messages 使用 add_messages reducer，保证新旧消息合并而非覆盖。
     """
     messages: Annotated[list, add_messages] = Field(default_factory=list)
-    intent: str = ""          # 意图分类结果：medical 放行 / refuse 拦截
+    intent: str = ""          # 意图分类结果：chat 放行 / refuse 拦截
     current_node: str = ""    # 当前所在节点名，用于追踪执行路径
+
+
+class IntentResult(BaseModel):
+    """意图识别结果，供 LLM 结构化输出使用"""
+    intent: Literal["medical", "refuse"]

@@ -2,7 +2,7 @@ from langchain_core.messages import SystemMessage
 
 from config.llm import llm_no_stream
 from config.logger import logger
-from config.prompt import INTENT_PROMPT
+from agent.prompts import INTENT_PROMPT
 
 
 async def intent_node(state):

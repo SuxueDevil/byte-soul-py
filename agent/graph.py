@@ -1,10 +1,10 @@
 from langgraph.graph import END, StateGraph
 
-from .memory.checkpointer import checkpointer
+from .checkpointer import checkpointer
 from .nodes.chat_node import chat_node
 from .nodes.intent_node import intent_node
 from .nodes.refuse_node import refuse_node
-from .state.agent_state import AgentState
+from .state import AgentState
 
 
 class AgentGraphBuilder:

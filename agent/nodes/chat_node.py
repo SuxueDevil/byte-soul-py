@@ -3,7 +3,7 @@ from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 
 from config.llm import llm
 from config.logger import logger
-from config.prompt import CHAT_PROMPT
+from agent.prompts import CHAT_PROMPT
 
 prompt = ChatPromptTemplate.from_messages([
     ("system", CHAT_PROMPT),

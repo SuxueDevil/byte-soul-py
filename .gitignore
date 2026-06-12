@@ -11,7 +11,7 @@ __pycache__
 .env
 config.yaml
 
-agent/data/
+data/
 
 logs/
 
