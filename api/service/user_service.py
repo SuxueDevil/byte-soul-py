@@ -7,7 +7,7 @@ class UserService:
     """用户服务层：封装用户相关的业务逻辑与数据库操作"""
 
     @staticmethod
-    def get_user(user_id: int) -> UserVO:
+    async def get_user(user_id: int) -> UserVO:
         """
         根据用户 ID 查询用户信息。
         @param user_id: 用户主键 ID

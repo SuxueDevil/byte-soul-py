@@ -1,7 +1,7 @@
 from fastapi import APIRouter
 
 from api.schemas.response import Response
-from api.schemas.user import UserDTO,UserVO
+from api.schemas.user import UserDTO, UserVO
 from api.service.user_service import UserService
 
 user_router = APIRouter(prefix="/users", tags=["用户管理"])
@@ -14,7 +14,7 @@ async def get_user(user_id: int):
     @param user_id: 用户主键 ID
     @return: 统一响应包装的 UserVO
     """
-    user_vo = await UserService.get_user(user_id)
+    user_vo: UserVO = await UserService.get_user(user_id)
     return Response.success(user_vo)
 
 
