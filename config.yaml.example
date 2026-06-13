@@ -121,12 +121,10 @@ rag:
     enable_rewrite: true       # 查询改写
     enable_expansion: true     # 查询扩展
     expansion_count: 3         # 扩展查询数量
-    enable_hyde: false         # 假设性文档嵌入
 
   # 检索中：多路检索
   mid_retrieval:
     enable_bm25: true          # BM25 关键词检索
-    enable_compression: true   # 上下文压缩
 
   # 检索后：融合精排
   post_retrieval:
