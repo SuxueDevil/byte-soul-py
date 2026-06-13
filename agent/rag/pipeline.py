@@ -1,18 +1,30 @@
 """RAG 管道：串联全部核心步骤"""
 from pathlib import Path
+from dataclasses import dataclass
 from langchain_core.documents import Document
 from config.logger import logger
 from .models import FileType
 from .ingestion.markdown_loader import markdown_loader
 from .ingestion.markdown_splitter import markdown_splitter
 from .ingestion.doc_store import doc_store
-from .pre_retrieval import query_rewriter, query_expander
+from .pre_retrieval.query_rewriter import QueryRewriter
+from .pre_retrieval.query_expansion import QueryExpander
 from .mid_retrieval import vector_retriever, bm25_retriever, context_compressor
 from .post_retrieval import rrf_fuser, reranker
 
 
+@dataclass
+class RAGDependencies:
+    """RAG 管道依赖"""
+    query_rewriter: QueryRewriter
+    query_expander: QueryExpander
+
+
 class RAGPipeline:
     """RAG 管道：离线入库 + 在线检索"""
+
+    def __init__(self, deps: RAGDependencies):
+        self.deps = deps
 
     def get_loader(self, file_name: str):
         """
@@ -72,9 +84,9 @@ class RAGPipeline:
 
         # 一、检索前：查询优化
         # 1、查询改写：口语化 → 正式表述
-        rewritten = query_rewriter.rewrite(question)
+        rewritten = self.deps.query_rewriter.rewrite(question)
         # 2、查询扩展：生成多个相关查询
-        queries = query_expander.expand(rewritten)
+        queries = self.deps.query_expander.expand(rewritten)
         logger.info(f"检索前完成: {len(queries)} 个查询")
 
         # 二、检索中：多路检索
@@ -133,5 +145,14 @@ class RAGPipeline:
         return "暂未实现"
 
 
-# 模块级单例
-rag_pipeline = RAGPipeline()
+def create_rag_pipeline() -> RAGPipeline:
+    """创建 RAG 管道实例（依赖注入入口）"""
+    deps = RAGDependencies(
+        query_rewriter=QueryRewriter(),
+        query_expander=QueryExpander(),
+    )
+    return RAGPipeline(deps)
+
+
+# 模块级单例（默认实例）
+rag_pipeline = create_rag_pipeline()

@@ -1,9 +1,10 @@
+"""Agent 服务：接收 OpenAI 请求，返回 OpenAI 格式的流式 ChatChunk"""
 import time
 import uuid
+from dataclasses import dataclass
 
 from langchain_core.messages import HumanMessage, AIMessage
 from api.schemas.chat import ChatChunk, ChatRequest
-from agent.graph import agent
 
 # OpenAI role → LangChain 消息类型映射（system 由服务端 prompt 管理，不接收客户端传入）
 _ROLE_MAP = {
@@ -12,16 +13,23 @@ _ROLE_MAP = {
 }
 
 
+@dataclass
+class AgentServiceDependencies:
+    """Agent 服务依赖"""
+    agent: object  # LangGraph CompiledStateGraph
+
+
 class AgentService:
     """Agent 服务层：接收 OpenAI 请求，返回 OpenAI 格式的流式 ChatChunk"""
 
-    @staticmethod
-    def _to_lc_messages(messages: list[ChatRequest.Message]):
+    def __init__(self, deps: AgentServiceDependencies):
+        self.deps = deps
+
+    def _to_lc_messages(self, messages: list[ChatRequest.Message]):
         # 将 OpenAI 消息列表转为 LangChain 消息，过滤客户端 system 消息
         return [_ROLE_MAP[m.role](content=m.content) for m in messages if m.role != "system"]
 
-    @staticmethod
-    async def chat(request: ChatRequest):
+    async def chat(self, request: ChatRequest):
         """
         流式对话接口。
         @param request: ChatRequest，OpenAI chat.completions 格式
@@ -45,8 +53,8 @@ class AgentService:
         # 三、流式执行
         # 1、将 OpenAI 消息转为 LangChain 消息，注入图执行
         # 2、v2 事件格式，监听 on_chat_model_stream 获取增量 token
-        async for event in agent.astream_events(
-            {"messages": AgentService._to_lc_messages(request.messages)},
+        async for event in self.deps.agent.astream_events(
+            {"messages": self._to_lc_messages(request.messages)},
             config,
             version="v2",
         ):
@@ -77,3 +85,15 @@ class AgentService:
             model=model,
             choices=[ChatChunk.Choice(delta=delta, finish_reason="stop")],
         )
+
+
+def create_agent_service() -> AgentService:
+    """创建 Agent 服务实例（依赖注入入口）"""
+    from agent.graph import agent
+    deps = AgentServiceDependencies(agent=agent)
+    return AgentService(deps)
+
+
+def get_agent_service() -> AgentService:
+    """FastAPI Depends 注入点"""
+    return create_agent_service()
