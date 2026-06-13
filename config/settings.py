@@ -44,6 +44,15 @@ class Settings:
 
         # ---- RAG ----
         rag = cfg.get("rag", {})
+        # 切割模式：general / parent_child
+        self.rag_chunk_mode: str = rag.get("chunk_mode", "parent_child")
+        # 父子模式配置
+        self.rag_parent_delimiter: str = rag.get("parent_delimiter", "\n\n")
+        self.rag_parent_max_size: int = rag.get("parent_max_size", 2000)
+        self.rag_child_delimiter: str = rag.get("child_delimiter", "\n\n")
+        self.rag_child_max_size: int = rag.get("child_max_size", 500)
+        self.rag_child_overlap: int = rag.get("child_overlap", 50)
+        # 通用模式配置
         self.rag_chunk_size: int = rag.get("chunk_size", 500)
         self.rag_chunk_overlap: int = rag.get("chunk_overlap", 50)
 
