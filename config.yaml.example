@@ -96,11 +96,20 @@ rag:
     model: text-embedding-v3
     # api_key: sk-your-api-key      # 不填则复用 llm.api_key
     # base_url: https://...          # 不填则复用 llm.base_url
+    dimensions: 1024                 # 向量维度
 
-  # 向量存储
+  # Milvus 向量存储
   vectorstore:
-    type: chroma
-    persist_directory: data/vectorstore
+    milvus_host: localhost
+    milvus_port: 19530
+    collection_name: rag_embeddings
+
+  # Elasticsearch BM25 检索
+  bm25:
+    es_hosts: ["http://localhost:9200"]
+    index_name: rag_chunks
+    ik_analyzer: ik_max_word         # 索引用 IK 粗粒度分词
+    ik_search_analyzer: ik_smart     # 搜索用 IK 细粒度分词
 
   # 检索配置
   retrieval:

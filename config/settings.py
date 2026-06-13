@@ -61,11 +61,20 @@ class Settings:
         self.embedding_model: str = embedding.get("model", "text-embedding-v3")
         self.embedding_api_key: str = embedding.get("api_key", self.llm_api_key)
         self.embedding_base_url: str = embedding.get("base_url", self.llm_base_url)
+        self.embedding_dimensions: int = embedding.get("dimensions", 1024)
 
-        # 向量存储
+        # Milvus 向量存储
         vectorstore = rag.get("vectorstore", {})
-        self.vectorstore_type: str = vectorstore.get("type", "chroma")
-        self.vectorstore_persist_directory: str = vectorstore.get("persist_directory", "data/vectorstore")
+        self.milvus_host: str = vectorstore.get("milvus_host", "localhost")
+        self.milvus_port: int = vectorstore.get("milvus_port", 19530)
+        self.milvus_collection: str = vectorstore.get("collection_name", "rag_embeddings")
+
+        # Elasticsearch BM25
+        bm25 = rag.get("bm25", {})
+        self.es_hosts: list[str] = bm25.get("es_hosts", ["http://localhost:9200"])
+        self.es_index_name: str = bm25.get("index_name", "rag_chunks")
+        self.es_ik_analyzer: str = bm25.get("ik_analyzer", "ik_max_word")
+        self.es_ik_search_analyzer: str = bm25.get("ik_search_analyzer", "ik_smart")
 
         # 检索配置
         retrieval = rag.get("retrieval", {})

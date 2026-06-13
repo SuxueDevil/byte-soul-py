@@ -9,7 +9,7 @@ from .ingestion.markdown_splitter import markdown_splitter
 from .ingestion.doc_store import doc_store
 from .pre_retrieval.query_rewriter import QueryRewriter
 from .pre_retrieval.query_expansion import QueryExpander
-from .mid_retrieval import vector_retriever, bm25_retriever, context_compressor
+from .mid_retrieval import vector_retriever, bm25_retriever
 from .post_retrieval import rrf_fuser, reranker
 
 
@@ -94,9 +94,6 @@ class RAGPipeline:
         vector_docs = vector_retriever.search(queries)
         # 2、BM25 检索：Elasticsearch 关键词匹配（子块匹配）
         bm25_docs = bm25_retriever.search(queries)
-        # 3、上下文压缩：提取相关片段
-        vector_docs = context_compressor.compress(question, vector_docs)
-        bm25_docs = context_compressor.compress(question, bm25_docs)
         logger.info(f"检索中完成: 向量 {len(vector_docs)} 条, BM25 {len(bm25_docs)} 条")
 
         # 三、检索后：融合与重排序
