@@ -10,17 +10,17 @@ class VectorStore:
     def __init__(self):
         # 一、连接 Milvus
         uri = f"http://{settings.milvus_host}:{settings.milvus_port}"
-        self._client = MilvusClient(uri=uri)
-        self._collection = settings.milvus_collection
-        self._dimension = settings.embedding_dimensions
+        self.client = MilvusClient(uri=uri)
+        self.collection = settings.milvus_collection
+        self.dimension = settings.embedding_dimensions
         logger.info(f"Milvus 已连接: {uri}")
 
         # 二、确保集合存在
-        self._ensure_collection()
+        self.ensure_collection()
 
-    def _ensure_collection(self):
+    def ensure_collection(self):
         """确保集合存在，不存在则创建"""
-        if self._client.has_collection(self._collection):
+        if self.client.has_collection(self.collection):
             return
 
         # 一、定义字段
@@ -29,27 +29,28 @@ class VectorStore:
             FieldSchema(name="pg_id", dtype=DataType.INT64),
             FieldSchema(name="content", dtype=DataType.VARCHAR, max_length=65535),
             FieldSchema(name="doc_hash", dtype=DataType.VARCHAR, max_length=64),
-            FieldSchema(name="vector", dtype=DataType.FLOAT_VECTOR, dim=self._dimension),
+            FieldSchema(name="vector", dtype=DataType.FLOAT_VECTOR, dim=self.dimension),
         ]
 
         # 二、创建集合
         schema = CollectionSchema(fields=fields, enable_dynamic_field=True)
-        self._client.create_collection(
-            collection_name=self._collection,
+        self.client.create_collection(
+            collection_name=self.collection,
             schema=schema,
         )
 
         # 三、创建向量索引
-        self._client.create_index(
-            collection_name=self._collection,
+        index_params = self.client.prepare_index_params()
+        index_params.add_index(
             field_name="vector",
-            index_params={
-                "metric_type": "COSINE",
-                "index_type": "IVF_FLAT",
-                "params": {"nlist": 128},
-            },
+            index_type="AUTOINDEX",
+            metric_type="COSINE",
         )
-        logger.info(f"Milvus 集合已创建: {self._collection}, 维度={self._dimension}")
+        self.client.create_index(
+            collection_name=self.collection,
+            index_params=index_params,
+        )
+        logger.info(f"Milvus 集合已创建: {self.collection}, 维度={self.dimension}")
 
     def insert(self, pg_id: int, content: str, embedding: list[float], doc_hash: str = ""):
         """
@@ -59,8 +60,8 @@ class VectorStore:
         @param embedding: 向量
         @param doc_hash: 文档哈希
         """
-        self._client.insert(
-            collection_name=self._collection,
+        self.client.insert(
+            collection_name=self.collection,
             data=[{
                 "pg_id": pg_id,
                 "content": content,
@@ -76,8 +77,8 @@ class VectorStore:
         """
         if not records:
             return
-        self._client.insert(
-            collection_name=self._collection,
+        self.client.insert(
+            collection_name=self.collection,
             data=records,
         )
         logger.info(f"Milvus 批量插入: {len(records)} 条")
@@ -89,8 +90,8 @@ class VectorStore:
         @param top_k: 返回数量
         @return: [{pg_id, content, score}, ...]
         """
-        results = self._client.search(
-            collection_name=self._collection,
+        results = self.client.search(
+            collection_name=self.collection,
             data=[embedding],
             limit=top_k,
             output_fields=["pg_id", "content"],
@@ -112,8 +113,8 @@ class VectorStore:
         按 pg_id 删除向量。
         @param pg_id: PostgreSQL 主键
         """
-        self._client.delete(
-            collection_name=self._collection,
+        self.client.delete(
+            collection_name=self.collection,
             filter=f"pg_id == {pg_id}",
         )
 
@@ -122,8 +123,8 @@ class VectorStore:
         按文档哈希删除所有相关向量。
         @param doc_hash: 文档哈希
         """
-        self._client.delete(
-            collection_name=self._collection,
+        self.client.delete(
+            collection_name=self.collection,
             filter=f'doc_hash == "{doc_hash}"',
         )
         logger.info(f"Milvus 删除文档: {doc_hash}")

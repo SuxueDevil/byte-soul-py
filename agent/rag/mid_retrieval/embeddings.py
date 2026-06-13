@@ -10,12 +10,12 @@ class EmbeddingModel:
     def __init__(self):
         # 一、创建 OpenAI 兼容客户端
         # 1、通义千问 embedding API 兼容 OpenAI 接口
-        self._client = OpenAI(
+        self.client = OpenAI(
             api_key=settings.embedding_api_key,
             base_url=settings.embedding_base_url,
         )
-        self._model = settings.embedding_model
-        self._dimensions = settings.embedding_dimensions
+        self.model = settings.embedding_model
+        self.dimensions = settings.embedding_dimensions
 
     def embed_query(self, text: str) -> list[float]:
         """
@@ -23,10 +23,10 @@ class EmbeddingModel:
         @param text: 输入文本
         @return: 向量列表（1024 维）
         """
-        response = self._client.embeddings.create(
-            model=self._model,
+        response = self.client.embeddings.create(
+            model=self.model,
             input=text,
-            dimensions=self._dimensions,
+            dimensions=self.dimensions,
         )
         return response.data[0].embedding
 
@@ -45,14 +45,14 @@ class EmbeddingModel:
         batch_size = 25
         for i in range(0, len(texts), batch_size):
             batch = texts[i:i + batch_size]
-            response = self._client.embeddings.create(
-                model=self._model,
+            response = self.client.embeddings.create(
+                model=self.model,
                 input=batch,
-                dimensions=self._dimensions,
+                dimensions=self.dimensions,
             )
             all_embeddings.extend([item.embedding for item in response.data])
 
-        logger.info(f"嵌入完成: {len(texts)} 条文本, 维度 {self._dimensions}")
+        logger.info(f"嵌入完成: {len(texts)} 条文本, 维度 {self.dimensions}")
         return all_embeddings
 
 

@@ -81,7 +81,7 @@ class MarkdownSplitter:
 
             # 2、对每个父块切子块
             for _, pc_content in parent_chunks:
-                child_sections = self._split_to_child_chunks(pc_content)
+                child_sections = self.split_to_child_chunks(pc_content)
 
                 for child_index, child_content in enumerate(child_sections):
                     chunk_metadata = metadata.copy()
@@ -97,7 +97,7 @@ class MarkdownSplitter:
         logger.info(f"父子模式切割: {len(parent_sections)} 个父块, {len(documents)} 个子块")
         return documents
 
-    def _split_to_child_chunks(self, content: str) -> list[str]:
+    def split_to_child_chunks(self, content: str) -> list[str]:
         """
         将父块内容切为子块。
         @param content: 父块内容

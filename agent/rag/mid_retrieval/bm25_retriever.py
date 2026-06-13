@@ -9,16 +9,16 @@ class BM25Retriever:
 
     def __init__(self):
         # 一、连接 Elasticsearch
-        self._es = Elasticsearch(settings.es_hosts)
-        self._index = settings.es_index_name
+        self.es = Elasticsearch(settings.es_hosts)
+        self.index = settings.es_index_name
         logger.info(f"Elasticsearch 已连接: {settings.es_hosts}")
 
         # 二、确保索引存在
-        self._ensure_index()
+        self.ensure_index()
 
-    def _ensure_index(self):
+    def ensure_index(self):
         """确保索引存在，不存在则创建"""
-        if self._es.indices.exists(index=self._index):
+        if self.es.indices.exists(index=self.index):
             return
 
         # 一、定义 mapping
@@ -37,10 +37,10 @@ class BM25Retriever:
             }
         }
 
-        self._es.indices.create(index=self._index, body=mapping)
-        logger.info(f"ES 索引已创建: {self._index}")
+        self.es.indices.create(index=self.index, body=mapping)
+        logger.info(f"ES 索引已创建: {self.index}")
 
-    def index(self, pg_id: int, content: str, doc_hash: str = "", chunk_index: int = 0):
+    def index_doc(self, pg_id: int, content: str, doc_hash: str = "", chunk_index: int = 0):
         """
         索引一条文档。
         @param pg_id: PostgreSQL 主键
@@ -48,8 +48,8 @@ class BM25Retriever:
         @param doc_hash: 文档哈希
         @param chunk_index: 块序号
         """
-        self._es.index(
-            index=self._index,
+        self.es.index(
+            index=self.index,
             id=pg_id,
             body={
                 "pg_id": pg_id,
@@ -81,7 +81,7 @@ class BM25Retriever:
                 },
                 "size": top_k,
             }
-            resp = self._es.search(index=self._index, body=body)
+            resp = self.es.search(index=self.index, body=body)
 
             # 二、解析结果
             for hit in resp.get("hits", {}).get("hits", []):
@@ -111,15 +111,15 @@ class BM25Retriever:
         按 pg_id 删除文档。
         @param pg_id: PostgreSQL 主键
         """
-        self._es.delete(index=self._index, id=pg_id, ignore=[404])
+        self.es.delete(index=self.index, id=pg_id, ignore=[404])
 
     def delete_by_doc_hash(self, doc_hash: str):
         """
         按文档哈希删除所有相关文档。
         @param doc_hash: 文档哈希
         """
-        self._es.delete_by_query(
-            index=self._index,
+        self.es.delete_by_query(
+            index=self.index,
             body={"query": {"term": {"doc_hash": doc_hash}}},
         )
         logger.info(f"ES 删除文档: {doc_hash}")
