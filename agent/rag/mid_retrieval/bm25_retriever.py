@@ -50,7 +50,7 @@ class BM25Retriever:
         """
         self.es.index(
             index=self.index,
-            id=pg_id,
+            id=str(pg_id),
             body={
                 "pg_id": pg_id,
                 "content": content,
@@ -111,7 +111,10 @@ class BM25Retriever:
         按 pg_id 删除文档。
         @param pg_id: PostgreSQL 主键
         """
-        self.es.delete(index=self.index, id=pg_id, ignore=[404])
+        try:
+            self.es.delete(index=self.index, id=str(pg_id))
+        except Exception:
+            pass  # 文档不存在时忽略
 
     def delete_by_doc_hash(self, doc_hash: str):
         """
