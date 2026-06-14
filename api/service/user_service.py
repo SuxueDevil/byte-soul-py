@@ -48,10 +48,10 @@ class UserService:
 
 
 @lru_cache(maxsize=1)
-def _build_user_service() -> UserService:
+def get_user_service() -> UserService:
     """构建用户服务单例"""
     deps = UserServiceDependencies(database=database)
     return UserService(deps)
 
 
-UserServiceDep = Annotated[UserService, Depends(_build_user_service)]
+UserServiceDep = Annotated[UserService, Depends(get_user_service)]

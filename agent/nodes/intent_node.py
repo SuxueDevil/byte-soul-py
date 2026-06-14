@@ -35,15 +35,21 @@ async def intent_node(state):
         更新后的 AgentState，intent 字段为 chat 或 refuse
     """
     # 一、意图分类
+    user_message = state.messages[-1]
     response = await llm_no_stream.ainvoke([
         SystemMessage(content=INTENT_PROMPT),
-        state.messages[-1],
+        user_message,
     ])
 
     # 二、解析结果
     content = parse_content(response.content).strip().upper()
     state.intent = "chat" if "CHAT" in content else "refuse"
     state.current_node = "intent"
-    logger.info("[intent_node] intent={} raw={}",
-                state.intent, response.content)
+
+    # 三、记录用户问题(超长截断,避免日志刷屏)
+    user_text = str(user_message.content)
+    if len(user_text) > 80:
+        user_text = user_text[:80] + "…"
+    logger.info("[intent_node] intent={} user={!r} raw={}",
+                state.intent, user_text, response.content)
     return state

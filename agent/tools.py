@@ -1,6 +1,6 @@
 """工具定义：使用 LangChain @tool 装饰器"""
 from langchain_core.tools import tool
-from agent.rag.pipeline import rag_pipeline
+from agent.rag.pipeline import get_rag_pipeline
 
 
 @tool
@@ -13,7 +13,7 @@ def rag_search(query: str) -> str:
     if not query:
         return "请提供检索关键词"
     try:
-        result = rag_pipeline.query(query)
+        result = get_rag_pipeline().query(query)
         return result if result else "未找到相关信息"
     except Exception as e:
         return f"检索失败: {str(e)}"

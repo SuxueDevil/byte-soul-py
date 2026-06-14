@@ -17,23 +17,34 @@ class VectorStore:
         self.ensure_collection()
 
     def ensure_collection(self):
-        """确保集合存在，不存在则创建"""
-        if self.client.has_collection(self.collection):
+        """确保集合和索引都存在,然后加载到内存(必须 load 才能 search)"""
+        # 一、集合不存在则创建
+        if not self.client.has_collection(self.collection):
+            fields = [
+                FieldSchema(name="id", dtype=DataType.INT64, is_primary=True, auto_id=True),
+                FieldSchema(name="pg_id", dtype=DataType.INT64),
+                FieldSchema(name="content", dtype=DataType.VARCHAR, max_length=65535),
+                FieldSchema(name="doc_hash", dtype=DataType.VARCHAR, max_length=64),
+                FieldSchema(name="vector", dtype=DataType.FLOAT_VECTOR, dim=self.dimension),
+            ]
+
+            schema = CollectionSchema(fields=fields, enable_dynamic_field=True)
+            self.client.create_collection(
+                collection_name=self.collection,
+                schema=schema,
+            )
+            logger.info(f"Milvus 集合已创建: {self.collection}, 维度={self.dimension}")
+
+        # 二、索引不存在则创建(覆盖历史脏数据:集合在但索引丢了的场景)
+        self._ensure_index()
+
+        # 三、加载到内存
+        self._load()
+
+    def _ensure_index(self):
+        """确保索引存在,不存在则创建"""
+        if self.client.list_indexes(collection_name=self.collection):
             return
-
-        fields = [
-            FieldSchema(name="id", dtype=DataType.INT64, is_primary=True, auto_id=True),
-            FieldSchema(name="pg_id", dtype=DataType.INT64),
-            FieldSchema(name="content", dtype=DataType.VARCHAR, max_length=65535),
-            FieldSchema(name="doc_hash", dtype=DataType.VARCHAR, max_length=64),
-            FieldSchema(name="vector", dtype=DataType.FLOAT_VECTOR, dim=self.dimension),
-        ]
-
-        schema = CollectionSchema(fields=fields, enable_dynamic_field=True)
-        self.client.create_collection(
-            collection_name=self.collection,
-            schema=schema,
-        )
 
         index_params = self.client.prepare_index_params()
         index_params.add_index(
@@ -45,7 +56,12 @@ class VectorStore:
             collection_name=self.collection,
             index_params=index_params,
         )
-        logger.info(f"Milvus 集合已创建: {self.collection}, 维度={self.dimension}")
+        logger.info(f"Milvus 索引已创建: {self.collection}")
+
+    def _load(self):
+        """把集合加载到内存(必须 load 才能 search)"""
+        self.client.load_collection(collection_name=self.collection)
+        logger.info(f"Milvus 集合已加载: {self.collection}")
 
     def insert(self, pg_id: int, content: str, embedding: list[float], doc_hash: str = ""):
         """插入一条向量

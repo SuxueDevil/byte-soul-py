@@ -90,10 +90,10 @@ class AgentService:
 
 
 @lru_cache(maxsize=1)
-def _build_agent_service() -> AgentService:
+def get_agent_service() -> AgentService:
     """构建 Agent 服务单例"""
     deps = AgentServiceDependencies(agent=get_agent())
     return AgentService(deps)
 
 
-AgentServiceDep = Annotated[AgentService, Depends(_build_agent_service)]
+AgentServiceDep = Annotated[AgentService, Depends(get_agent_service)]

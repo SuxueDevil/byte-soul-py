@@ -5,7 +5,7 @@ from typing import Annotated
 
 from fastapi import Depends
 
-from agent.rag.pipeline import RAGPipeline, rag_pipeline
+from agent.rag.pipeline import RAGPipeline, get_rag_pipeline
 from api.schemas.rag import FileDTO
 
 
@@ -34,10 +34,10 @@ class RagService:
 
 
 @lru_cache(maxsize=1)
-def _build_rag_service() -> RagService:
+def get_rag_service() -> RagService:
     """构建 RAG 服务单例"""
-    deps = RagServiceDependencies(pipeline=rag_pipeline)
+    deps = RagServiceDependencies(pipeline=get_rag_pipeline())
     return RagService(deps)
 
 
-RagServiceDep = Annotated[RagService, Depends(_build_rag_service)]
+RagServiceDep = Annotated[RagService, Depends(get_rag_service)]

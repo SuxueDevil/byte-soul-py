@@ -1,6 +1,7 @@
 """RAG 管道：串联全部核心步骤"""
 from pathlib import Path
 from dataclasses import dataclass
+from functools import lru_cache
 from langchain_core.documents import Document
 from config.logger import logger
 from agent.schemas.rag import FileType
@@ -63,7 +64,7 @@ class RAGPipeline:
         Returns:
             入库的 chunk 数量
         """
-        logger.info(f"开始入库: {file_name}")
+        logger.info(f"[RagPipeline] 开始入库: {file_name}")
 
         # 一、根据文件类型匹配加载器
         loader = self.get_loader(file_name)
@@ -71,19 +72,19 @@ class RAGPipeline:
         # 二、加载文档
         documents = loader.load(content, file_name)
         if not documents:
-            logger.warning(f"加载失败: {file_name}")
+            logger.warning(f"[RagPipeline] 加载失败: {file_name}")
             return 0
-        logger.info(f"加载完成: {len(documents)} 个文档")
+        logger.info(f"[RagPipeline] 加载完成: {len(documents)} 个文档")
 
         # 三、切割文档
         chunks = []
         for doc in documents:
             chunks.extend(markdown_splitter.split(doc))
-        logger.info(f"切割完成: {len(chunks)} 个 chunk")
+        logger.info(f"[RagPipeline] 切割完成: {len(chunks)} 个 chunk")
 
         # 四、入库
         count = doc_store.ingest(chunks)
-        logger.info(f"入库完成: {count} 个 chunk")
+        logger.info(f"[RagPipeline] 入库完成: {count} 个 chunk")
         return count
 
     def query(self, question: str) -> str:
@@ -95,27 +96,27 @@ class RAGPipeline:
         Returns:
             回答文本
         """
-        logger.info(f"开始检索: {question}")
+        logger.info(f"[RagPipeline] 开始检索: {question}")
 
         # 一、检索前：查询优化
         rewritten = self.deps.query_rewriter.rewrite(question)
         queries = self.deps.query_expander.expand(rewritten)
-        logger.info(f"检索前完成: {len(queries)} 个查询")
+        logger.info(f"[RagPipeline] 检索前完成: {len(queries)} 个查询")
 
         # 二、检索中：多路检索
         vector_docs = vector_retriever.search(queries)
         bm25_docs = bm25_retriever.search(queries)
-        logger.info(f"检索中完成: 向量 {len(vector_docs)} 条, BM25 {len(bm25_docs)} 条")
+        logger.info(f"[RagPipeline] 检索中完成: 向量 {len(vector_docs)} 条, BM25 {len(bm25_docs)} 条")
 
         # 三、检索后：融合与重排序
         fused = rrf_fuser.fuse(vector_docs, bm25_docs)
         fused = self.replace_with_parent_context(fused)
         results = reranker.rerank(question, fused)
-        logger.info(f"检索后完成: {len(results)} 条结果")
+        logger.info(f"[RagPipeline] 检索后完成: {len(results)} 条结果")
 
         # 四、生成回答
         answer = self.generate(question, results)
-        logger.info("回答生成完成")
+        logger.info("[RagPipeline] 回答生成完成")
         return answer
 
     def replace_with_parent_context(self, docs: list[dict]) -> list[dict]:
@@ -154,14 +155,11 @@ class RAGPipeline:
         return "暂未实现"
 
 
-def create_rag_pipeline() -> RAGPipeline:
-    """创建 RAG 管道实例（依赖注入入口）"""
+@lru_cache(maxsize=1)
+def get_rag_pipeline() -> RAGPipeline:
+    """懒构建 RAG 管道单例（首次调用时执行,之后永久复用）"""
     deps = RAGDependencies(
         query_rewriter=QueryRewriter(),
         query_expander=QueryExpander(),
     )
     return RAGPipeline(deps)
-
-
-# 模块级单例
-rag_pipeline = create_rag_pipeline()
