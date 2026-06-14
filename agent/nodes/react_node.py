@@ -1,5 +1,5 @@
 """ReAct 节点：自主推理 + 工具调用循环"""
-from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
+from langchain_core.messages import SystemMessage, HumanMessage, AIMessage, BaseMessage
 
 from config.llm import llm_no_stream
 from config.logger import logger
@@ -8,6 +8,21 @@ from agent.react import build_tools_description, parse_action, parse_final_answe
 
 # ReAct 最大循环次数
 MAX_ITERATIONS = 3
+
+
+def parse_content(content: str | list) -> str:
+    """解析 LLM 返回内容，兼容字符串和结构化输出"""
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        parts = []
+        for item in content:
+            if isinstance(item, str):
+                parts.append(item)
+            elif isinstance(item, dict):
+                parts.append(str(item.get("text", "")))
+        return "".join(parts)
+    return str(content)
 
 
 async def react_node(state):
@@ -33,20 +48,21 @@ async def react_node(state):
     system_prompt = REACT_PROMPT.format(tools=tools_desc)
 
     # 三、ReAct 循环
-    conversation = []
+    conversation: list[BaseMessage] = []
     final_answer = None
+    llm_output = ""
 
     for iteration in range(MAX_ITERATIONS):
         logger.info(f"[react_node] 循环 {iteration + 1}/{MAX_ITERATIONS}")
 
         # 1、构建消息列表
-        messages = [SystemMessage(content=system_prompt)]
+        messages: list[BaseMessage] = [SystemMessage(content=system_prompt)]
         messages.append(HumanMessage(content=user_message))
         messages.extend(conversation)
 
         # 2、调用 LLM
         response = await llm_no_stream.ainvoke(messages)
-        llm_output = response.content
+        llm_output = parse_content(response.content)
         logger.info(f"[react_node] LLM 输出:\n{llm_output}")
 
         # 3、解析输出
