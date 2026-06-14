@@ -1,14 +1,79 @@
 """ReAct 节点：自主推理 + 工具调用循环"""
+import json
+import re
+
 from langchain_core.messages import SystemMessage, HumanMessage, AIMessage, BaseMessage
 
-from config.llm import llm
+from config.llm import llm_no_stream
 from config.logger import logger
 from agent.prompts import REACT_PROMPT
 from agent.tools import tool_executor
-from agent.react import parse_action, parse_final_answer, execute_tool
 
 # ReAct 最大循环次数
 MAX_ITERATIONS = 3
+
+
+def parse_content(content: str | list) -> str:
+    """解析 LLM 返回内容，兼容字符串和结构化输出"""
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        parts = []
+        for item in content:
+            if isinstance(item, str):
+                parts.append(item)
+            elif isinstance(item, dict):
+                parts.append(str(item.get("text", "")))
+        return "".join(parts)
+    return str(content)
+
+
+def parse_action(text: str) -> tuple[str, str] | None:
+    """
+    从 LLM 输出中解析 Action 和 Action Input。
+    @param text: LLM 输出文本
+    @return: (action, action_input) 或 None
+    """
+    # 一、匹配 Action
+    action_match = re.search(r"Action:\s*(.+?)(?:\n|$)", text)
+    input_match = re.search(r"Action Input:\s*(.+?)(?:\n|$)", text)
+
+    if action_match and input_match:
+        action = action_match.group(1).strip()
+        action_input = input_match.group(1).strip()
+        return action, action_input
+    return None
+
+
+def parse_final_answer(text: str) -> str | None:
+    """
+    从 LLM 输出中解析 Final Answer。
+    @param text: LLM 输出文本
+    @return: 最终答案或 None
+    """
+    # 一、匹配 Final Answer
+    match = re.search(r"Final Answer:\s*(.+)", text, re.DOTALL)
+    if match:
+        return match.group(1).strip()
+    return None
+
+
+def execute_tool(action: str, action_input: str) -> str:
+    """
+    执行工具调用。
+    @param action: 工具名称
+    @param action_input: 工具参数（JSON 字符串）
+    @return: 工具执行结果
+    """
+    # 一、解析参数
+    try:
+        params = json.loads(action_input)
+    except json.JSONDecodeError:
+        params = {"query": action_input}
+
+    # 二、调用工具执行器
+    result = tool_executor.call(action, params)
+    return result.content if result.success else f"错误: {result.error}"
 
 
 async def react_node(state):
@@ -46,8 +111,8 @@ async def react_node(state):
         messages.append(HumanMessage(content=user_message))
         messages.extend(conversation)
 
-        # 2、调用 LLM（流式）
-        response = await llm.ainvoke(messages)
+        # 2、调用 LLM
+        response = await llm_no_stream.ainvoke(messages)
         llm_output = parse_content(response.content)
         logger.info(f"[react_node] LLM 输出:\n{llm_output}")
 
@@ -76,8 +141,7 @@ async def react_node(state):
         logger.info(f"[react_node] 工具结果: {observation[:200]}...")
 
         # 7、将结果加入对话
-        conversation.append(HumanMessage(
-            content=f"Observation: {observation}"))
+        conversation.append(HumanMessage(content=f"Observation: {observation}"))
 
     # 四、如果没有获得最终答案，使用最后一次 LLM 输出
     if not final_answer:
@@ -89,18 +153,3 @@ async def react_node(state):
     state.current_node = "react"
 
     return state
-
-
-def parse_content(content: str | list) -> str:
-    """解析 LLM 返回内容，兼容字符串和结构化输出"""
-    if isinstance(content, str):
-        return content
-    if isinstance(content, list):
-        parts = []
-        for item in content:
-            if isinstance(item, str):
-                parts.append(item)
-            elif isinstance(item, dict):
-                parts.append(str(item.get("text", "")))
-        return "".join(parts)
-    return str(content)
