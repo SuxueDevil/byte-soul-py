@@ -2,22 +2,13 @@
 
 ## 命名规范
 
-### 文件命名
-- 使用小写字母 + 下划线：`markdown_loader.py`
-- 测试文件以 `test_` 开头：`test_markdown_loader.py`
-- 配置文件使用小写字母：`config.yaml`
-
 ### 类命名
 - 使用大驼峰：`MarkdownLoader`、`IngestionPipeline`
 - 抽象类以 `Base` 开头：`BaseRetriever`
 
 ### 函数/方法命名
 - 使用小写字母 + 下划线：`load_documents`、`split_by_header`
-- 不创建私有方法，所有方法都是公有
-
-### 变量命名
-- 使用小写字母 + 下划线：`chunk_size`、`embedding_model`
-- 常量使用大写字母：`MAX_CHUNK_SIZE`、`DEFAULT_TOP_K`
+- 私有方法不加_
 
 ### 配置项命名
 - 使用小写字母 + 下划线：`rag.chunk_size`、`llm.api_key`
@@ -57,21 +48,6 @@ doc_hash = hashlib.md5(content).hexdigest()
 ```
 
 ## 代码结构
-
-### 文件结构
-```python
-# 1. 标准库导入
-import os
-import hashlib
-
-# 2. 第三方库导入
-from langchain_core.documents import Document
-from pydantic import BaseModel
-
-# 3. 本地模块导入
-from config.settings import settings
-from config.logger import logger
-```
 
 ### 类结构
 ```python
@@ -116,15 +92,6 @@ class PaymentStatus(Enum):
 if status == PaymentStatus.SUCCESS:
     handle_success()
 
-# 三、字典映射
-# 1、用字典替代 if-elif 链，适合简单的分支处理
-handlers = {
-    "success": handle_success,
-    "error": handle_error,
-    "pending": handle_pending,
-}
-handler = handlers.get(status, handle_unknown)
-handler()
 ```
 
 ## 设计模式
@@ -169,24 +136,6 @@ name = request.name or "unknown"
 name = request.name  # Pydantic 已保证非空
 ```
 
-### 异常捕获
-```python
-try:
-    result = risky_operation()
-except SpecificError as e:
-    logger.error(f"操作失败: {e}")
-    raise
-```
-
-### 日志记录
-```python
-from config.logger import logger
-
-logger.info("操作成功")
-logger.warning("警告信息")
-logger.error("错误信息")
-```
-
 ## 配置管理
 
 ### 配置读取
@@ -196,18 +145,6 @@ from config.settings import settings
 # 读取配置
 chunk_size = settings.rag.chunk_size
 api_key = settings.llm.api_key
-```
-
-## 依赖管理
-
-### 依赖声明
-- 在 `pyproject.toml` 中声明
-- 明确版本号
-```toml
-dependencies = [
-    "langchain>=1.3.8",
-    "pymilvus>=2.4.0",
-]
 ```
 
 ## Git 规范
