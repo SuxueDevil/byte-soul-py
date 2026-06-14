@@ -3,7 +3,7 @@ from agent.rag.pipeline import rag_pipeline
 from config.logger import logger
 
 
-async def retriever_node(state):
+def retriever_node(state):
     """
     RAG 检索节点：根据用户问题检索相关文档，注入上下文。
     @param state: AgentState，包含 messages 列表
@@ -23,7 +23,7 @@ async def retriever_node(state):
 
     # 执行 RAG 检索
     try:
-        context = await rag_pipeline.retrieve(user_message)
+        context = rag_pipeline.query(user_message)
         # 将检索到的上下文注入状态
         state.rag_context = context
         logger.info("[retriever_node] 检索完成，上下文长度: {} 字符", len(context))

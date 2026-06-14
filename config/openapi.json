@@ -1,0 +1,255 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "ByteSoul Agent API",
+    "description": "FastAPI + LangGraph RAG 助手 API",
+    "version": "0.1.0"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8000",
+      "description": "本地开发"
+    }
+  ],
+  "paths": {
+    "/agent/chat": {
+      "post": {
+        "tags": ["医疗Agent"],
+        "summary": "OpenAI 格式 SSE 流式聊天",
+        "description": "OpenAI chat.completions 兼容接口，返回 SSE 流式响应",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ChatRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "SSE 流式响应",
+            "content": {
+              "text/event-stream": {
+                "schema": { "$ref": "#/components/schemas/ChatChunk" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rag/ingest": {
+      "post": {
+        "tags": ["RAG"],
+        "summary": "上传文档入库",
+        "description": "上传文档文件，进行切割、向量化、入库",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "上传的文件（支持 .md 格式）"
+                  }
+                },
+                "required": ["file"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "入库结果",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    { "$ref": "#/components/schemas/Response" },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "object",
+                          "properties": {
+                            "chunk_count": {
+                              "type": "integer",
+                              "description": "入库的 chunk 数量"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/users/{user_id}": {
+      "get": {
+        "tags": ["用户管理"],
+        "summary": "根据用户 ID 查询",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer" },
+            "description": "用户主键 ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "用户信息",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    { "$ref": "#/components/schemas/Response" },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": { "$ref": "#/components/schemas/UserVO" }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/users": {
+      "post": {
+        "tags": ["用户管理"],
+        "summary": "创建新用户",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/UserDTO" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "创建结果",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Response" }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ChatRequest": {
+        "type": "object",
+        "required": ["messages"],
+        "properties": {
+          "messages": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/ChatMessage" },
+            "description": "对话消息列表，支持多轮上下文"
+          },
+          "stream": {
+            "type": "boolean",
+            "default": true,
+            "description": "是否流式返回"
+          },
+          "user": {
+            "type": "string",
+            "nullable": true,
+            "description": "用户标识，映射到 thread_id"
+          },
+          "model": {
+            "type": "string",
+            "nullable": true,
+            "description": "可选模型名"
+          }
+        }
+      },
+      "ChatMessage": {
+        "type": "object",
+        "required": ["role", "content"],
+        "properties": {
+          "role": {
+            "type": "string",
+            "enum": ["system", "user", "assistant"],
+            "description": "消息角色"
+          },
+          "content": {
+            "type": "string",
+            "description": "消息内容"
+          }
+        }
+      },
+      "ChatChunk": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "description": "对话唯一标识" },
+          "object": { "type": "string", "default": "chat.completion.chunk" },
+          "created": { "type": "integer", "description": "Unix 时间戳" },
+          "model": { "type": "string", "description": "模型名" },
+          "choices": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "index": { "type": "integer", "default": 0 },
+                "delta": {
+                  "type": "object",
+                  "properties": {
+                    "role": { "type": "string", "nullable": true },
+                    "content": { "type": "string", "nullable": true }
+                  }
+                },
+                "finish_reason": {
+                  "type": "string",
+                  "enum": ["stop"],
+                  "nullable": true
+                }
+              }
+            }
+          }
+        }
+      },
+      "UserDTO": {
+        "type": "object",
+        "required": ["name", "email", "age"],
+        "properties": {
+          "id": { "type": "integer", "nullable": true },
+          "name": { "type": "string", "description": "姓名" },
+          "email": { "type": "string", "description": "邮箱" },
+          "age": { "type": "integer", "description": "年龄" }
+        }
+      },
+      "UserVO": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer", "nullable": true, "description": "用户ID" },
+          "name": { "type": "string", "nullable": true, "description": "姓名" },
+          "email": { "type": "string", "nullable": true, "description": "邮箱" },
+          "age": { "type": "integer", "nullable": true, "description": "年龄" }
+        }
+      },
+      "Response": {
+        "type": "object",
+        "properties": {
+          "code": { "type": "integer", "default": 200, "description": "状态码" },
+          "message": { "type": "string", "default": "success", "description": "消息" },
+          "data": { "description": "数据" }
+        }
+      }
+    }
+  }
+}

@@ -4,7 +4,7 @@ from config.logger import logger
 from agent.prompts import REFUSE_PROMPT
 
 
-async def refuse_node(state):
+def refuse_node(state):
     """
     终审节点：非医疗意图追加拒绝消息，医疗意图透传。
     @param state: AgentState，根据 intent 决定是否拦截
