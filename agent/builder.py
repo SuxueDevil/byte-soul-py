@@ -1,11 +1,11 @@
 """LangGraph 状态图构建器"""
 from langgraph.graph import END, StateGraph
 
-from .checkpointer import checkpointer
+from .memory.checkpointer import checkpointer
 from .nodes.intent_node import intent_node
 from .nodes.react_node import react_node
 from .nodes.refuse_node import refuse_node
-from .state import AgentState
+from .schemas.state import AgentState
 
 
 class AgentGraphBuilder:

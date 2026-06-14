@@ -1,7 +1,7 @@
 from langchain_core.messages import AIMessage
 
 from config.logger import logger
-from agent.prompts import REFUSE_PROMPT
+from config.prompts import REFUSE_PROMPT
 
 
 def refuse_node(state):

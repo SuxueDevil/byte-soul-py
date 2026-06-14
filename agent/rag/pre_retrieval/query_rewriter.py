@@ -1,7 +1,7 @@
 """查询改写：口语化 → 正式检索词"""
 from config.llm import llm_no_stream
 from config.logger import logger
-from agent.prompts import REWRITE_PROMPT
+from config.prompts import REWRITE_PROMPT
 from langchain_core.messages import SystemMessage, HumanMessage
 
 

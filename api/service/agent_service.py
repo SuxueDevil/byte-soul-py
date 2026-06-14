@@ -89,7 +89,7 @@ class AgentService:
 
 def create_agent_service() -> AgentService:
     """创建 Agent 服务实例（依赖注入入口）"""
-    from agent.graph import agent
+    from agent.builder import agent
     deps = AgentServiceDependencies(agent=agent)
     return AgentService(deps)
 

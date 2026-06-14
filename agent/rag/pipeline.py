@@ -3,7 +3,7 @@ from pathlib import Path
 from dataclasses import dataclass
 from langchain_core.documents import Document
 from config.logger import logger
-from .models import FileType
+from ..schemas.rag import FileType
 from .ingestion.markdown_loader import markdown_loader
 from .ingestion.markdown_splitter import markdown_splitter
 from .ingestion.doc_store import doc_store

@@ -1,7 +1,7 @@
 """查询扩展：生成多个语义相关查询，扩大召回"""
 from config.llm import llm_no_stream
 from config.logger import logger
-from agent.prompts import EXPANSION_PROMPT
+from config.prompts import EXPANSION_PROMPT
 from langchain_core.messages import SystemMessage, HumanMessage
 
 
