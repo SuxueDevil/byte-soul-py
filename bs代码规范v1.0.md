@@ -29,10 +29,13 @@ class MarkdownLoader:
 ### 方法注释
 ```python
 def load(self, file_path: str) -> list[Document]:
-    """
-    加载单个 Markdown 文件。
-    @param file_path: 文件路径
-    @return: Document 列表
+    """加载单个 Markdown 文件
+
+    Args:
+        file_path: 文件路径
+
+    Returns:
+        Document 列表
     """
 ```
 
