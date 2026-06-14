@@ -1,82 +1,13 @@
 """ReAct 节点：自主推理 + 工具调用循环"""
-import json
-import re
-
 from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
 
 from config.llm import llm_no_stream
 from config.logger import logger
 from agent.prompts import REACT_PROMPT
-from agent.tools import rag_tool
+from agent.react import build_tools_description, parse_action, parse_final_answer, execute_tool
 
-# 一、工具注册表
-TOOLS = {
-    rag_tool.name: rag_tool,
-}
-
-# 二、ReAct 最大循环次数
+# ReAct 最大循环次数
 MAX_ITERATIONS = 3
-
-
-def build_tools_description() -> str:
-    """
-    构建工具描述文本，用于 Prompt。
-    @return: 工具描述字符串
-    """
-    return "\n".join(tool.to_prompt() for tool in TOOLS.values())
-
-
-def parse_action(text: str) -> tuple[str, str] | None:
-    """
-    从 LLM 输出中解析 Action 和 Action Input。
-    @param text: LLM 输出文本
-    @return: (action, action_input) 或 None
-    """
-    # 一、匹配 Action
-    action_match = re.search(r"Action:\s*(.+?)(?:\n|$)", text)
-    input_match = re.search(r"Action Input:\s*(.+?)(?:\n|$)", text)
-
-    if action_match and input_match:
-        action = action_match.group(1).strip()
-        action_input = input_match.group(1).strip()
-        return action, action_input
-    return None
-
-
-def parse_final_answer(text: str) -> str | None:
-    """
-    从 LLM 输出中解析 Final Answer。
-    @param text: LLM 输出文本
-    @return: 最终答案或 None
-    """
-    # 一、匹配 Final Answer
-    match = re.search(r"Final Answer:\s*(.+)", text, re.DOTALL)
-    if match:
-        return match.group(1).strip()
-    return None
-
-
-def execute_tool(action: str, action_input: str) -> str:
-    """
-    执行工具调用。
-    @param action: 工具名称
-    @param action_input: 工具参数（JSON 字符串）
-    @return: 工具执行结果
-    """
-    # 一、查找工具
-    tool = TOOLS.get(action)
-    if not tool:
-        return f"错误：未知工具 '{action}'，可用工具: {list(TOOLS.keys())}"
-
-    # 二、解析参数并执行
-    try:
-        params = json.loads(action_input)
-        return tool.execute(**params)
-    except json.JSONDecodeError:
-        # 1、尝试将整个输入作为 query 参数
-        return tool.execute(query=action_input)
-    except Exception as e:
-        return f"工具执行失败: {str(e)}"
 
 
 async def react_node(state):
