@@ -200,5 +200,5 @@ async def react_node(state):
     """
     async for event in react_node_stream(state):
         if event["type"] == "answer":
-            logger.info(f"[react_node] 最终答案: {event['content'][:100]}...")
+            logger.info(f"[ReactNode] 最终答案: {event['content'][:100]}...")
     return state

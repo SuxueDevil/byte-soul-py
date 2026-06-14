@@ -50,6 +50,6 @@ async def intent_node(state):
     user_text = str(user_message.content)
     if len(user_text) > 80:
         user_text = user_text[:80] + "…"
-    logger.info("[intent_node] intent={} user={!r} raw={}",
+    logger.info("[IntentNode] intent={} user={!r} raw={}",
                 state.intent, user_text, response.content)
     return state

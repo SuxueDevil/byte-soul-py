@@ -19,5 +19,5 @@ async def refuse_node(state):
         state.messages.append(AIMessage(content=REFUSE_PROMPT))
 
     state.current_node = "refuse"
-    logger.info("[refuse_node] state: {}", state)
+    logger.info("[RefuseNode] state: {}", state)
     return state
