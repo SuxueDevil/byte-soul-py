@@ -1,9 +1,9 @@
 """用户控制器：用户管理接口"""
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter
 
 from api.schemas.response import Response
 from api.schemas.user import UserDTO, UserVO
-from api.service.user_service import UserService, get_user_service
+from api.service.user_service import UserServiceDep
 
 user_router = APIRouter(prefix="/users", tags=["用户管理"])
 
@@ -11,7 +11,7 @@ user_router = APIRouter(prefix="/users", tags=["用户管理"])
 @user_router.get("/{user_id}")
 async def get_user(
     user_id: int,
-    user_service: UserService = Depends(get_user_service),
+    user_service: UserServiceDep,
 ):
     """
     根据用户 ID 查询。
@@ -26,7 +26,7 @@ async def get_user(
 @user_router.post("")
 async def create_user(
     user_dto: UserDTO,
-    user_service: UserService = Depends(get_user_service),
+    user_service: UserServiceDep,
 ):
     """
     创建新用户。

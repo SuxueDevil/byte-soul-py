@@ -1,10 +1,15 @@
 """RAG 服务：文件上传入库"""
 from dataclasses import dataclass
-from agent.rag.pipeline import RAGPipeline
+from functools import lru_cache
+from typing import Annotated
+
+from fastapi import Depends
+
+from agent.rag.pipeline import RAGPipeline, rag_pipeline
 from api.schemas.rag import FileDTO
 
 
-@dataclass
+@dataclass(frozen=True)
 class RagServiceDependencies:
     """RAG 服务依赖"""
     pipeline: RAGPipeline
@@ -13,7 +18,7 @@ class RagServiceDependencies:
 class RagService:
     """RAG 服务层"""
 
-    def __init__(self, deps: RagServiceDependencies):
+    def __init__(self, deps: RagServiceDependencies) -> None:
         self.deps = deps
 
     def ingest(self, file: FileDTO) -> int:
@@ -28,8 +33,11 @@ class RagService:
         return self.deps.pipeline.ingest(text, file.filename)
 
 
-def get_rag_service() -> RagService:
-    """创建 RAG 服务实例（FastAPI Depends 注入点）"""
-    from agent.rag.pipeline import rag_pipeline
+@lru_cache(maxsize=1)
+def _build_rag_service() -> RagService:
+    """构建 RAG 服务单例"""
     deps = RagServiceDependencies(pipeline=rag_pipeline)
     return RagService(deps)
+
+
+RagServiceDep = Annotated[RagService, Depends(_build_rag_service)]

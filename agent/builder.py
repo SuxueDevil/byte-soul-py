@@ -1,4 +1,6 @@
 """LangGraph 状态图构建器"""
+from functools import lru_cache
+
 from langgraph.graph import END, StateGraph
 
 from .memory.checkpointer import checkpointer
@@ -9,7 +11,7 @@ from .schemas.state import AgentState
 
 
 class AgentGraphBuilder:
-    """LangGraph 状态图构建器，编译后导出模块级单例"""
+    """LangGraph 状态图构建器"""
 
     def route_decision(self, state: AgentState) -> str:
         """根据意图分类结果路由到对应节点
@@ -48,5 +50,7 @@ class AgentGraphBuilder:
         return state_graph.compile(checkpointer=checkpointer, store=None)
 
 
-# 模块级单例
-agent = AgentGraphBuilder().build()
+@lru_cache(maxsize=1)
+def get_agent():
+    """懒构建并返回 LangGraph 图(进程级单例,首次调用时执行 build)"""
+    return AgentGraphBuilder().build()

@@ -1,11 +1,16 @@
 """用户服务层：封装用户相关的业务逻辑与数据库操作"""
 from dataclasses import dataclass
-from config.database import Database
+from functools import lru_cache
+from typing import Annotated
+
+from fastapi import Depends
+
+from config.database import Database, database
 from api.schemas.user import UserDTO, UserVO
 from api.models.user import User
 
 
-@dataclass
+@dataclass(frozen=True)
 class UserServiceDependencies:
     """用户服务依赖"""
     database: Database
@@ -14,7 +19,7 @@ class UserServiceDependencies:
 class UserService:
     """用户服务层：封装用户相关的业务逻辑与数据库操作"""
 
-    def __init__(self, deps: UserServiceDependencies):
+    def __init__(self, deps: UserServiceDependencies) -> None:
         self.deps = deps
 
     async def get_user(self, user_id: int) -> UserVO:
@@ -42,8 +47,11 @@ class UserService:
             return True
 
 
-def get_user_service() -> UserService:
-    """创建用户服务实例（FastAPI Depends 注入点）"""
-    from config.database import database
+@lru_cache(maxsize=1)
+def _build_user_service() -> UserService:
+    """构建用户服务单例"""
     deps = UserServiceDependencies(database=database)
     return UserService(deps)
+
+
+UserServiceDep = Annotated[UserService, Depends(_build_user_service)]

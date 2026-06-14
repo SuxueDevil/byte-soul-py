@@ -1,6 +1,6 @@
 """RAG 控制器：文件上传入库"""
-from fastapi import APIRouter, UploadFile, File, Depends
-from api.service.rag_service import RagService, get_rag_service
+from fastapi import APIRouter, UploadFile, File
+from api.service.rag_service import RagServiceDep
 from api.schemas.rag import FileDTO
 from api.schemas.response import Response
 
@@ -9,8 +9,8 @@ rag_router = APIRouter(prefix="/rag", tags=["RAG"])
 
 @rag_router.post("/ingest")
 async def ingest(
+    rag_service: RagServiceDep,
     file: UploadFile = File(...),
-    rag_service: RagService = Depends(get_rag_service),
 ):
     """
     上传文档入库。
