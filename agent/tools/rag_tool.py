@@ -9,7 +9,7 @@ class RAGTool(BaseTool):
     name = "rag_search"
     description = "从知识库检索相关信息，输入为查询文本"
 
-    def execute(self, query: str = "", **kwargs) -> str:
+    def execute(self, query: str = "") -> str:
         """
         执行 RAG 检索。
         @param query: 查询文本

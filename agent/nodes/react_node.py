@@ -2,19 +2,19 @@
 import json
 import re
 
-from langchain_core.messages import SystemMessage, HumanMessage
+from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
 
 from config.llm import llm_no_stream
 from config.logger import logger
 from agent.prompts import REACT_PROMPT
 from agent.tools import rag_tool
 
-# 工具注册表
+# 一、工具注册表
 TOOLS = {
     rag_tool.name: rag_tool,
 }
 
-# ReAct 最大循环次数
+# 二、ReAct 最大循环次数
 MAX_ITERATIONS = 3
 
 
@@ -32,6 +32,7 @@ def parse_action(text: str) -> tuple[str, str] | None:
     @param text: LLM 输出文本
     @return: (action, action_input) 或 None
     """
+    # 一、匹配 Action
     action_match = re.search(r"Action:\s*(.+?)(?:\n|$)", text)
     input_match = re.search(r"Action Input:\s*(.+?)(?:\n|$)", text)
 
@@ -48,6 +49,7 @@ def parse_final_answer(text: str) -> str | None:
     @param text: LLM 输出文本
     @return: 最终答案或 None
     """
+    # 一、匹配 Final Answer
     match = re.search(r"Final Answer:\s*(.+)", text, re.DOTALL)
     if match:
         return match.group(1).strip()
@@ -61,15 +63,17 @@ def execute_tool(action: str, action_input: str) -> str:
     @param action_input: 工具参数（JSON 字符串）
     @return: 工具执行结果
     """
+    # 一、查找工具
     tool = TOOLS.get(action)
     if not tool:
         return f"错误：未知工具 '{action}'，可用工具: {list(TOOLS.keys())}"
 
+    # 二、解析参数并执行
     try:
         params = json.loads(action_input)
         return tool.execute(**params)
     except json.JSONDecodeError:
-        # 尝试将整个输入作为 query 参数
+        # 1、尝试将整个输入作为 query 参数
         return tool.execute(query=action_input)
     except Exception as e:
         return f"工具执行失败: {str(e)}"
@@ -117,14 +121,14 @@ async def react_node(state):
         # 3、解析输出
         conversation.append(response)
 
-        # 检查是否有 Final Answer
+        # 4、检查是否有 Final Answer
         final = parse_final_answer(llm_output)
         if final:
             final_answer = final
-            logger.info(f"[react_node] 获得最终答案")
+            logger.info("[react_node] 获得最终答案")
             break
 
-        # 4、解析 Action
+        # 5、解析 Action
         action_result = parse_action(llm_output)
         if not action_result:
             logger.warning("[react_node] 无法解析 Action，使用 LLM 输出作为答案")
@@ -134,11 +138,11 @@ async def react_node(state):
         action, action_input = action_result
         logger.info(f"[react_node] 调用工具: {action}, 参数: {action_input}")
 
-        # 5、执行工具
+        # 6、执行工具
         observation = execute_tool(action, action_input)
         logger.info(f"[react_node] 工具结果: {observation[:200]}...")
 
-        # 6、将结果加入对话
+        # 7、将结果加入对话
         conversation.append(HumanMessage(content=f"Observation: {observation}"))
 
     # 四、如果没有获得最终答案，使用最后一次 LLM 输出
@@ -147,7 +151,6 @@ async def react_node(state):
         final_answer = llm_output
 
     # 五、更新状态
-    from langchain_core.messages import AIMessage
     state.messages.append(AIMessage(content=final_answer))
     state.current_node = "react"
 
