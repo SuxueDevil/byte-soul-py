@@ -1,0 +1,154 @@
+"""ReAct 节点：自主推理 + 工具调用循环"""
+import json
+import re
+
+from langchain_core.messages import SystemMessage, HumanMessage
+
+from config.llm import llm_no_stream
+from config.logger import logger
+from agent.prompts import REACT_PROMPT
+from agent.tools import rag_tool
+
+# 工具注册表
+TOOLS = {
+    rag_tool.name: rag_tool,
+}
+
+# ReAct 最大循环次数
+MAX_ITERATIONS = 3
+
+
+def build_tools_description() -> str:
+    """
+    构建工具描述文本，用于 Prompt。
+    @return: 工具描述字符串
+    """
+    return "\n".join(tool.to_prompt() for tool in TOOLS.values())
+
+
+def parse_action(text: str) -> tuple[str, str] | None:
+    """
+    从 LLM 输出中解析 Action 和 Action Input。
+    @param text: LLM 输出文本
+    @return: (action, action_input) 或 None
+    """
+    action_match = re.search(r"Action:\s*(.+?)(?:\n|$)", text)
+    input_match = re.search(r"Action Input:\s*(.+?)(?:\n|$)", text)
+
+    if action_match and input_match:
+        action = action_match.group(1).strip()
+        action_input = input_match.group(1).strip()
+        return action, action_input
+    return None
+
+
+def parse_final_answer(text: str) -> str | None:
+    """
+    从 LLM 输出中解析 Final Answer。
+    @param text: LLM 输出文本
+    @return: 最终答案或 None
+    """
+    match = re.search(r"Final Answer:\s*(.+)", text, re.DOTALL)
+    if match:
+        return match.group(1).strip()
+    return None
+
+
+def execute_tool(action: str, action_input: str) -> str:
+    """
+    执行工具调用。
+    @param action: 工具名称
+    @param action_input: 工具参数（JSON 字符串）
+    @return: 工具执行结果
+    """
+    tool = TOOLS.get(action)
+    if not tool:
+        return f"错误：未知工具 '{action}'，可用工具: {list(TOOLS.keys())}"
+
+    try:
+        params = json.loads(action_input)
+        return tool.execute(**params)
+    except json.JSONDecodeError:
+        # 尝试将整个输入作为 query 参数
+        return tool.execute(query=action_input)
+    except Exception as e:
+        return f"工具执行失败: {str(e)}"
+
+
+async def react_node(state):
+    """
+    ReAct 节点：自主推理 + 工具调用循环。
+    @param state: AgentState
+    @return: 更新后的 AgentState
+    """
+    # 一、获取用户消息
+    user_message = None
+    for msg in reversed(state.messages):
+        if hasattr(msg, "content") and msg.type == "human":
+            user_message = msg.content
+            break
+
+    if not user_message:
+        logger.warning("[react_node] 未找到用户消息")
+        state.current_node = "react"
+        return state
+
+    # 二、构建 ReAct Prompt
+    tools_desc = build_tools_description()
+    system_prompt = REACT_PROMPT.format(tools=tools_desc)
+
+    # 三、ReAct 循环
+    conversation = []
+    final_answer = None
+
+    for iteration in range(MAX_ITERATIONS):
+        logger.info(f"[react_node] 循环 {iteration + 1}/{MAX_ITERATIONS}")
+
+        # 1、构建消息列表
+        messages = [SystemMessage(content=system_prompt)]
+        messages.append(HumanMessage(content=user_message))
+        messages.extend(conversation)
+
+        # 2、调用 LLM
+        response = await llm_no_stream.ainvoke(messages)
+        llm_output = response.content
+        logger.info(f"[react_node] LLM 输出:\n{llm_output}")
+
+        # 3、解析输出
+        conversation.append(response)
+
+        # 检查是否有 Final Answer
+        final = parse_final_answer(llm_output)
+        if final:
+            final_answer = final
+            logger.info(f"[react_node] 获得最终答案")
+            break
+
+        # 4、解析 Action
+        action_result = parse_action(llm_output)
+        if not action_result:
+            logger.warning("[react_node] 无法解析 Action，使用 LLM 输出作为答案")
+            final_answer = llm_output
+            break
+
+        action, action_input = action_result
+        logger.info(f"[react_node] 调用工具: {action}, 参数: {action_input}")
+
+        # 5、执行工具
+        observation = execute_tool(action, action_input)
+        logger.info(f"[react_node] 工具结果: {observation[:200]}...")
+
+        # 6、将结果加入对话
+        conversation.append(HumanMessage(content=f"Observation: {observation}"))
+
+    # 四、如果没有获得最终答案，使用最后一次 LLM 输出
+    if not final_answer:
+        logger.warning("[react_node] 达到最大循环次数，使用最后一次输出")
+        final_answer = llm_output
+
+    # 五、更新状态
+    from langchain_core.messages import AIMessage
+    state.messages.append(AIMessage(content=final_answer))
+    state.current_node = "react"
+
+    return state

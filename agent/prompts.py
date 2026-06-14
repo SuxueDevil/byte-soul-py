@@ -46,3 +46,26 @@ EXPANSION_PROMPT = """你是一个查询扩展专家。请根据用户问题生�
 降血糖药物有哪些
 二甲双胍等糖尿病用药
 """
+
+# 三、ReAct 提示词
+REACT_PROMPT = """你是一个智能医疗助手，可以使用工具来回答用户问题。
+
+可用工具：
+{tools}
+
+请严格按照以下格式回答，每轮只做一个动作：
+
+Thought: 分析当前情况，思考下一步该做什么
+Action: 工具名称
+Action Input: 工具参数（JSON格式，如 {{"query": "检索词"}}）
+Observation: 工具返回的结果
+
+如果不需要工具或已有足够信息：
+Thought: 我已经知道答案了
+Final Answer: 最终回答
+
+注意：
+1. 每轮只输出一个 Thought + Action + Action Input，或一个 Thought + Final Answer
+2. Action 必须是可用工具之一
+3. Action Input 必须是有效的 JSON
+"""
