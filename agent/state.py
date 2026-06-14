@@ -13,8 +13,3 @@ class AgentState(BaseModel):
     intent: str = ""          # 意图分类结果：chat 放行 / refuse 拦截
     current_node: str = ""    # 当前所在节点名，用于追踪执行路径
     rag_context: str = ""     # RAG 检索到的上下文
-
-
-class IntentResult(BaseModel):
-    """意图识别结果，供 LLM 结构化输出使用"""
-    intent: Literal["medical", "refuse"]
