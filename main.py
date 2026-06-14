@@ -3,6 +3,7 @@ from contextlib import asynccontextmanager
 
 import uvicorn
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from api.handler.global_exception_handler import register
 from api.controller.user_controller import user_router
 from api.controller.agent_controller import agent_router
@@ -36,6 +37,15 @@ app.include_router(user_router)
 app.include_router(agent_router)
 app.include_router(rag_router)
 register(app)
+
+# 四、CORS 中间件
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 # 四、启动应用
