@@ -38,7 +38,7 @@ class QueryExpander:
                 return [query]
 
             result = [query] + expanded[:count]
-            logger.info(f"查询扩展: 1 → {len(result)} 个")
+            logger.info(f"查询扩展: {result}")
             return result
 
         except Exception as e:

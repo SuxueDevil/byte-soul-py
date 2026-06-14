@@ -101,7 +101,7 @@ class RAGPipeline:
         # 一、检索前：查询优化
         rewritten = self.deps.query_rewriter.rewrite(question)
         queries = self.deps.query_expander.expand(rewritten)
-        logger.info(f"[RagPipeline] 检索前完成: {len(queries)} 个查询")
+        logger.info(f"[RagPipeline] 检索前完成")
 
         # 二、检索中：多路检索
         vector_docs = vector_retriever.search(queries)
