@@ -23,7 +23,8 @@ async def intent_node(state):
     ])
 
     # 二、解析结果
-    content = response.content.strip().upper()
+    # 当前模型只返 str,type: ignore 抑制 Pylance 警告(类型声明是 str | list)
+    content = response.content.strip().upper()  # type: ignore
     state.intent = "chat" if "CHAT" in content else "refuse"
     state.current_node = "intent"
 

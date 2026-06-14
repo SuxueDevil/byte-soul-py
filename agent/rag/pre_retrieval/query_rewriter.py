@@ -22,7 +22,8 @@ class QueryRewriter:
                 SystemMessage(content=REWRITE_PROMPT),
                 HumanMessage(content=query),
             ])
-            rewritten = response.content.strip()
+            # 当前模型只返 str,type: ignore 抑制 Pylance 警告(类型声明是 str | list)
+            rewritten = response.content.strip()  # type: ignore
 
             if not rewritten or len(rewritten) > len(query) * 3:
                 logger.warning(f"查询改写结果异常，使用原始查询: {rewritten}")

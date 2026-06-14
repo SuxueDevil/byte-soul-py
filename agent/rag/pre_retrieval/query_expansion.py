@@ -25,7 +25,8 @@ class QueryExpander:
                 HumanMessage(content=query),
             ])
 
-            content = response.content
+            # 当前模型只返 str,type: ignore 抑制 Pylance 警告(类型声明是 str | list)
+            content = response.content  # type: ignore
             expanded = [
                 line.strip()
                 for line in content.strip().split("\n")

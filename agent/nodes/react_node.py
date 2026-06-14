@@ -126,7 +126,8 @@ async def react_node_stream(state):
         full_content = ""
         async for chunk in llm.astream(messages):
             if chunk.content:
-                token = chunk.content
+                # 流式 chunk.content 类型是 str | list,type: ignore 抑制 Pylance 警告
+                token = chunk.content  # type: ignore
                 full_content += token
                 yield {"type": "token", "content": token}
 
