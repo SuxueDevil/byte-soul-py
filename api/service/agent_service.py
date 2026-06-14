@@ -95,13 +95,8 @@ class AgentService:
         )
 
 
-def create_agent_service() -> AgentService:
-    """创建 Agent 服务实例（依赖注入入口）"""
+def get_agent_service() -> AgentService:
+    """创建 Agent 服务实例（FastAPI Depends 注入点）"""
     from agent.builder import agent
     deps = AgentServiceDependencies(agent=agent)
     return AgentService(deps)
-
-
-def get_agent_service() -> AgentService:
-    """FastAPI Depends 注入点"""
-    return create_agent_service()

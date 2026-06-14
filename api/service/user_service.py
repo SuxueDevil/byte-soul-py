@@ -42,13 +42,8 @@ class UserService:
             return True
 
 
-def create_user_service() -> UserService:
-    """创建用户服务实例（依赖注入入口）"""
+def get_user_service() -> UserService:
+    """创建用户服务实例（FastAPI Depends 注入点）"""
     from config.database import database
     deps = UserServiceDependencies(database=database)
     return UserService(deps)
-
-
-def get_user_service() -> UserService:
-    """FastAPI Depends 注入点"""
-    return create_user_service()

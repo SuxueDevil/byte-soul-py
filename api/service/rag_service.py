@@ -28,13 +28,8 @@ class RagService:
         return self.deps.pipeline.ingest(text, file.filename)
 
 
-def create_rag_service() -> RagService:
-    """创建 RAG 服务实例（依赖注入入口）"""
+def get_rag_service() -> RagService:
+    """创建 RAG 服务实例（FastAPI Depends 注入点）"""
     from agent.rag.pipeline import rag_pipeline
     deps = RagServiceDependencies(pipeline=rag_pipeline)
     return RagService(deps)
-
-
-def get_rag_service() -> RagService:
-    """FastAPI Depends 注入点"""
-    return create_rag_service()

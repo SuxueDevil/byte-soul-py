@@ -24,30 +24,3 @@ async def chat(
     """
     return OpenAIStreamResponse(agent_service.chat(request))
 
-
-@agent_router.post("/react")
-async def react(request: ChatRequest):
-    """
-    ReAct 模式 SSE 流式接口，输出推理过程。
-    Args:
-        request: ChatRequest
-    """
-    from agent.builder import agent
-    from agent.nodes.react_node import react_node_stream
-    from agent.schemas.state import AgentState
-    from langchain_core.messages import HumanMessage
-
-    # 一、构建初始状态
-    state = AgentState()
-    state.messages = [HumanMessage(content=request.messages[-1].content)]
-
-    # 二、SSE 流式输出
-    async def event_generator():
-        async for event in react_node_stream(state):
-            yield f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
-        yield "data: [DONE]\n\n"
-
-    return StreamingResponse(
-        event_generator(),
-        media_type="text/event-stream",
-    )

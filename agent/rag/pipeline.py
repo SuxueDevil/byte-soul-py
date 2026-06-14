@@ -133,7 +133,8 @@ class RAGPipeline:
             parent_index = doc.get("metadata", {}).get("parent_index")
             if parent_index is not None and parent_index not in seen:
                 seen.add(parent_index)
-                parent_content = doc.get("metadata", {}).get("parent_content", "")
+                parent_content = doc.get(
+                    "metadata", {}).get("parent_content", "")
                 if parent_content:
                     doc["content"] = parent_content
                 unique_docs.append(doc)
