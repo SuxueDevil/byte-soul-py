@@ -4,7 +4,7 @@ import re
 
 from langchain_core.messages import SystemMessage, HumanMessage, AIMessage, BaseMessage
 
-from config.llm import llm_no_stream
+from config.llm import llm
 from config.logger import logger
 from config.prompts import REACT_PROMPT
 from agent.tools import tools
@@ -143,7 +143,7 @@ async def react_node_stream(state):
 
         # 2、调用 LLM（流式）
         full_content = ""
-        async for chunk in llm_no_stream.astream(messages):
+        async for chunk in llm.astream(messages):
             if chunk.content:
                 token = parse_content(chunk.content)
                 full_content += token
