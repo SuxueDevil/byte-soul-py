@@ -8,7 +8,7 @@
 
 ### 函数/方法命名
 - 使用小写字母 + 下划线：`load_documents`、`split_by_header`
-- 私有方法不加_
+- 私有方法不加_，位置在共有方法之后
 
 ### 配置项命名
 - 使用小写字母 + 下划线：`rag.chunk_size`、`llm.api_key`

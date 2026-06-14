@@ -7,10 +7,13 @@ from langchain_core.messages import SystemMessage, HumanMessage, AIMessage, Base
 from config.llm import llm_no_stream
 from config.logger import logger
 from config.prompts import REACT_PROMPT
-from agent.tools import tool_executor
+from agent.tools import tools
 
 # ReAct 最大循环次数
 MAX_ITERATIONS = 3
+
+# 工具名称列表
+TOOL_NAMES = [t.name for t in tools]
 
 
 def parse_final_answer(text: str) -> str | None:
@@ -33,15 +36,32 @@ def execute_tool(action: str, action_input: str) -> str:
     @param action_input: 工具参数（JSON 字符串）
     @return: 工具执行结果
     """
-    # 一、解析参数
+    # 一、查找工具
+    tool_map = {t.name: t for t in tools}
+    tool = tool_map.get(action)
+    if not tool:
+        return f"错误：未知工具 '{action}'，可用工具: {TOOL_NAMES}"
+
+    # 二、解析参数并执行
     try:
         params = json.loads(action_input)
+        return tool.invoke(params)
     except json.JSONDecodeError:
-        params = {"query": action_input}
+        # 尝试将整个输入作为 query 参数
+        return tool.invoke({"query": action_input})
+    except Exception as e:
+        return f"工具执行失败: {str(e)}"
 
-    # 二、调用工具执行器
-    result = tool_executor.call(action, params)
-    return result.content if result.success else f"错误: {result.error}"
+
+def build_tools_description() -> str:
+    """
+    构建工具描述文本，用于 Prompt。
+    @return: 工具描述字符串
+    """
+    lines = []
+    for tool in tools:
+        lines.append(f"- {tool.name}: {tool.description}")
+    return "\n".join(lines)
 
 
 async def react_node(state):
@@ -63,7 +83,7 @@ async def react_node(state):
         return state
 
     # 二、构建 ReAct Prompt
-    tools_desc = tool_executor.get_tool_descriptions()
+    tools_desc = build_tools_description()
     system_prompt = REACT_PROMPT.format(tools=tools_desc)
 
     # 三、ReAct 循环
