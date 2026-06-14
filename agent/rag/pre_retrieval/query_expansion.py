@@ -5,25 +5,6 @@ from config.prompts import EXPANSION_PROMPT
 from langchain_core.messages import SystemMessage, HumanMessage
 
 
-def parse_content(content: str | list) -> str:
-    """解析 LLM 返回内容，兼容字符串和结构化输出
-
-    Args:
-        content: LLM 返回的内容，可能是字符串或列表
-    """
-    if isinstance(content, str):
-        return content
-    if isinstance(content, list):
-        parts = []
-        for item in content:
-            if isinstance(item, str):
-                parts.append(item)
-            elif isinstance(item, dict):
-                parts.append(str(item.get("text", "")))
-        return "".join(parts)
-    return str(content)
-
-
 class QueryExpander:
     """查询扩展器：将一个查询扩展为多个语义相关查询"""
 
@@ -44,7 +25,7 @@ class QueryExpander:
                 HumanMessage(content=query),
             ])
 
-            content = parse_content(response.content)
+            content = response.content
             expanded = [
                 line.strip()
                 for line in content.strip().split("\n")

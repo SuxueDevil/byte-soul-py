@@ -16,25 +16,6 @@ MAX_ITERATIONS = 3
 TOOL_NAMES = [t.name for t in tools]
 
 
-def parse_content(content: str | list) -> str:
-    """解析 LLM 返回内容，兼容字符串和结构化输出
-
-    Args:
-        content: LLM 返回的内容，可能是字符串或列表
-    """
-    if isinstance(content, str):
-        return content
-    if isinstance(content, list):
-        parts = []
-        for item in content:
-            if isinstance(item, str):
-                parts.append(item)
-            elif isinstance(item, dict):
-                parts.append(str(item.get("text", "")))
-        return "".join(parts)
-    return str(content)
-
-
 def parse_action(text: str) -> tuple[str, str] | None:
     """从 LLM 输出中解析 Action 和 Action Input
 
@@ -145,7 +126,7 @@ async def react_node_stream(state):
         full_content = ""
         async for chunk in llm.astream(messages):
             if chunk.content:
-                token = parse_content(chunk.content)
+                token = chunk.content
                 full_content += token
                 yield {"type": "token", "content": token}
 

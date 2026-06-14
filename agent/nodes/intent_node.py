@@ -6,25 +6,6 @@ from config.logger import logger
 from config.prompts import INTENT_PROMPT
 
 
-def parse_content(content: str | list) -> str:
-    """解析 LLM 返回内容，兼容字符串和结构化输出
-
-    Args:
-        content: LLM 返回的内容，可能是字符串或列表
-    """
-    if isinstance(content, str):
-        return content
-    if isinstance(content, list):
-        parts = []
-        for item in content:
-            if isinstance(item, str):
-                parts.append(item)
-            elif isinstance(item, dict):
-                parts.append(str(item.get("text", "")))
-        return "".join(parts)
-    return str(content)
-
-
 async def intent_node(state):
     """识别用户消息是否属于医疗健康领域
 
@@ -42,7 +23,7 @@ async def intent_node(state):
     ])
 
     # 二、解析结果
-    content = parse_content(response.content).strip().upper()
+    content = response.content.strip().upper()
     state.intent = "chat" if "CHAT" in content else "refuse"
     state.current_node = "intent"
 
