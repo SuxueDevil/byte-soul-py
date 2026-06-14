@@ -41,7 +41,7 @@ class AgentGraphBuilder:
             {"chat": "react", "refuse": "refuse"},
         )
         # 3、无条件边：react → refuse → END
-        state_graph.add_edge("react", "refuse")
+        state_graph.add_edge("react", END)
         state_graph.add_edge("refuse", END)
 
         return state_graph.compile(checkpointer=checkpointer, store=None)

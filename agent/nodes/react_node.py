@@ -13,38 +13,6 @@ from agent.tools import tool_executor
 MAX_ITERATIONS = 3
 
 
-def parse_content(content: str | list) -> str:
-    """解析 LLM 返回内容，兼容字符串和结构化输出"""
-    if isinstance(content, str):
-        return content
-    if isinstance(content, list):
-        parts = []
-        for item in content:
-            if isinstance(item, str):
-                parts.append(item)
-            elif isinstance(item, dict):
-                parts.append(str(item.get("text", "")))
-        return "".join(parts)
-    return str(content)
-
-
-def parse_action(text: str) -> tuple[str, str] | None:
-    """
-    从 LLM 输出中解析 Action 和 Action Input。
-    @param text: LLM 输出文本
-    @return: (action, action_input) 或 None
-    """
-    # 一、匹配 Action
-    action_match = re.search(r"Action:\s*(.+?)(?:\n|$)", text)
-    input_match = re.search(r"Action Input:\s*(.+?)(?:\n|$)", text)
-
-    if action_match and input_match:
-        action = action_match.group(1).strip()
-        action_input = input_match.group(1).strip()
-        return action, action_input
-    return None
-
-
 def parse_final_answer(text: str) -> str | None:
     """
     从 LLM 输出中解析 Final Answer。
@@ -141,7 +109,8 @@ async def react_node(state):
         logger.info(f"[react_node] 工具结果: {observation[:200]}...")
 
         # 7、将结果加入对话
-        conversation.append(HumanMessage(content=f"Observation: {observation}"))
+        conversation.append(HumanMessage(
+            content=f"Observation: {observation}"))
 
     # 四、如果没有获得最终答案，使用最后一次 LLM 输出
     if not final_answer:
@@ -153,3 +122,35 @@ async def react_node(state):
     state.current_node = "react"
 
     return state
+
+
+def parse_content(content: str | list) -> str:
+    """解析 LLM 返回内容，兼容字符串和结构化输出"""
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        parts = []
+        for item in content:
+            if isinstance(item, str):
+                parts.append(item)
+            elif isinstance(item, dict):
+                parts.append(str(item.get("text", "")))
+        return "".join(parts)
+    return str(content)
+
+
+def parse_action(text: str) -> tuple[str, str] | None:
+    """
+    从 LLM 输出中解析 Action 和 Action Input。
+    @param text: LLM 输出文本
+    @return: (action, action_input) 或 None
+    """
+    # 一、匹配 Action
+    action_match = re.search(r"Action:\s*(.+?)(?:\n|$)", text)
+    input_match = re.search(r"Action Input:\s*(.+?)(?:\n|$)", text)
+
+    if action_match and input_match:
+        action = action_match.group(1).strip()
+        action_input = input_match.group(1).strip()
+        return action, action_input
+    return None
