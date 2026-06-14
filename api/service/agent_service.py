@@ -4,6 +4,7 @@ import uuid
 from dataclasses import dataclass
 
 from langchain_core.messages import HumanMessage, AIMessage
+from langgraph.graph.state import CompiledStateGraph
 from api.schemas.chat import ChatChunk, ChatRequest
 
 # OpenAI role → LangChain 消息类型映射
@@ -16,7 +17,7 @@ _ROLE_MAP = {
 @dataclass
 class AgentServiceDependencies:
     """Agent 服务依赖"""
-    agent: object  # LangGraph CompiledStateGraph
+    agent: CompiledStateGraph  # LangGraph CompiledStateGraph
 
 
 class AgentService:

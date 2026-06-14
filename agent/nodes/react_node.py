@@ -6,7 +6,7 @@ from langchain_core.messages import SystemMessage, HumanMessage, AIMessage, Base
 
 from config.llm import llm_no_stream
 from config.logger import logger
-from agent.prompts import REACT_PROMPT
+from config.prompts import REACT_PROMPT
 from agent.tools import tools
 
 # ReAct 最大循环次数

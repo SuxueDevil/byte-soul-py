@@ -3,10 +3,10 @@ from fastapi import APIRouter, Depends
 from fastapi.responses import StreamingResponse
 import json
 
+from langgraph.graph.state import CompiledStateGraph
 from api.schemas.chat import ChatRequest
 from api.service.agent_service import AgentService, get_agent_service
 from api.handler.openai_sse_response import OpenAIStreamResponse
-from agent.nodes.react_node import react_node_stream
 
 agent_router = APIRouter(prefix="/agent", tags=["医疗Agent"])
 
@@ -33,10 +33,12 @@ async def react(request: ChatRequest):
         request: ChatRequest
     """
     from agent.builder import agent
+    from agent.nodes.react_node import react_node_stream
+    from agent.schemas.state import AgentState
     from langchain_core.messages import HumanMessage
 
-    # 一、构建状态
-    state = agent.get_state({"configurable": {"thread_id": "react"}})
+    # 一、构建初始状态
+    state = AgentState()
     state.messages = [HumanMessage(content=request.messages[-1].content)]
 
     # 二、SSE 流式输出
