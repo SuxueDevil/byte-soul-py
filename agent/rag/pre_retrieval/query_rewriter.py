@@ -5,24 +5,44 @@ from config.prompts import REWRITE_PROMPT
 from langchain_core.messages import SystemMessage, HumanMessage
 
 
+def parse_content(content: str | list) -> str:
+    """解析 LLM 返回内容，兼容字符串和结构化输出
+
+    Args:
+        content: LLM 返回的内容，可能是字符串或列表
+    """
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        parts = []
+        for item in content:
+            if isinstance(item, str):
+                parts.append(item)
+            elif isinstance(item, dict):
+                parts.append(str(item.get("text", "")))
+        return "".join(parts)
+    return str(content)
+
+
 class QueryRewriter:
     """查询改写器：将口语化问题转为正式检索词"""
 
     def rewrite(self, query: str) -> str:
-        """
-        改写查询。
-        @param query: 原始查询
-        @return: 改写后的查询，如果改写失败返回原始查询
+        """改写查询
+
+        Args:
+            query: 原始查询
+
+        Returns:
+            改写后的查询，如果改写失败返回原始查询
         """
         try:
-            # 一、调用 LLM 改写
             response = llm_no_stream.invoke([
                 SystemMessage(content=REWRITE_PROMPT),
                 HumanMessage(content=query),
             ])
-            rewritten = response.content.strip()
+            rewritten = parse_content(response.content).strip()
 
-            # 二、校验结果
             if not rewritten or len(rewritten) > len(query) * 3:
                 logger.warning(f"查询改写结果异常，使用原始查询: {rewritten}")
                 return query

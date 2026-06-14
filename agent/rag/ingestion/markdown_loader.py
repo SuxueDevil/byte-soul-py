@@ -1,4 +1,5 @@
 """Markdown 加载器：接收文件内容"""
+from pathlib import Path
 from langchain_core.documents import Document
 from config.logger import logger
 
@@ -7,11 +8,14 @@ class MarkdownLoader:
     """Markdown 文件加载器"""
 
     def load(self, content: str, file_name: str = "") -> list[Document]:
-        """
-        加载 Markdown 内容。
-        @param content: 文件内容
-        @param file_name: 文件名
-        @return: Document 列表
+        """加载 Markdown 内容
+
+        Args:
+            content: 文件内容
+            file_name: 文件名
+
+        Returns:
+            Document 列表
         """
         if not content.strip():
             logger.warning(f"文件内容为空: {file_name}")
@@ -23,11 +27,14 @@ class MarkdownLoader:
         }
         return [Document(page_content=content, metadata=metadata)]
 
-    def load_local(self, file_path: str) -> list[Document]:
-        """
-        从本地文件加载。
-        @param file_path: 文件路径
-        @return: Document 列表
+    def load_from_file(self, file_path: str) -> list[Document]:
+        """从本地文件加载
+
+        Args:
+            file_path: 文件路径
+
+        Returns:
+            Document 列表
         """
         with open(file_path, encoding="utf-8") as f:
             content = f.read()

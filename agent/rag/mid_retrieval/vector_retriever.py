@@ -8,23 +8,23 @@ class VectorRetriever:
     """向量检索器：接收多个 query，embedding 后检索 Milvus"""
 
     def search(self, queries: list[str], top_k: int = 5) -> list[dict]:
-        """
-        多 query 向量检索。
-        @param queries: 查询列表（来自检索前扩展）
-        @param top_k: 每个 query 返回数量
-        @return: 合并去重后的结果 [{pg_id, content, score, source}, ...]
+        """多 query 向量检索
+
+        Args:
+            queries: 查询列表（来自检索前扩展）
+            top_k: 每个 query 返回数量
+
+        Returns:
+            合并去重后的结果 [{pg_id, content, score, source}, ...]
         """
         all_hits = []
 
         for query in queries:
-            # 一、query → embedding
             embedding = embedding_model.embed_query(query)
-
-            # 二、Milvus 检索
             hits = vectorstore.search(embedding, top_k)
             all_hits.extend(hits)
 
-        # 三、按 pg_id 去重，保留最高分
+        # 按 pg_id 去重，保留最高分
         seen = {}
         for hit in all_hits:
             pg_id = hit.get("pg_id")

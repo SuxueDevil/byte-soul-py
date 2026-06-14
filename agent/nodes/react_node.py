@@ -16,13 +16,53 @@ MAX_ITERATIONS = 3
 TOOL_NAMES = [t.name for t in tools]
 
 
+def parse_content(content: str | list) -> str:
+    """解析 LLM 返回内容，兼容字符串和结构化输出
+
+    Args:
+        content: LLM 返回的内容，可能是字符串或列表
+    """
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        parts = []
+        for item in content:
+            if isinstance(item, str):
+                parts.append(item)
+            elif isinstance(item, dict):
+                parts.append(str(item.get("text", "")))
+        return "".join(parts)
+    return str(content)
+
+
+def parse_action(text: str) -> tuple[str, str] | None:
+    """从 LLM 输出中解析 Action 和 Action Input
+
+    Args:
+        text: LLM 输出文本
+
+    Returns:
+        (action, action_input) 或 None
+    """
+    action_match = re.search(r"Action:\s*(.+?)(?:\n|$)", text)
+    input_match = re.search(r"Action Input:\s*(.+?)(?:\n|$)", text)
+
+    if action_match and input_match:
+        action = action_match.group(1).strip()
+        action_input = input_match.group(1).strip()
+        return action, action_input
+    return None
+
+
 def parse_final_answer(text: str) -> str | None:
+    """从 LLM 输出中解析 Final Answer
+
+    Args:
+        text: LLM 输出文本
+
+    Returns:
+        最终答案或 None
     """
-    从 LLM 输出中解析 Final Answer。
-    @param text: LLM 输出文本
-    @return: 最终答案或 None
-    """
-    # 一、匹配 Final Answer
     match = re.search(r"Final Answer:\s*(.+)", text, re.DOTALL)
     if match:
         return match.group(1).strip()
@@ -30,33 +70,34 @@ def parse_final_answer(text: str) -> str | None:
 
 
 def execute_tool(action: str, action_input: str) -> str:
+    """执行工具调用
+
+    Args:
+        action: 工具名称
+        action_input: 工具参数（JSON 字符串）
+
+    Returns:
+        工具执行结果
     """
-    执行工具调用。
-    @param action: 工具名称
-    @param action_input: 工具参数（JSON 字符串）
-    @return: 工具执行结果
-    """
-    # 一、查找工具
     tool_map = {t.name: t for t in tools}
     tool = tool_map.get(action)
     if not tool:
         return f"错误：未知工具 '{action}'，可用工具: {TOOL_NAMES}"
 
-    # 二、解析参数并执行
     try:
         params = json.loads(action_input)
         return tool.invoke(params)
     except json.JSONDecodeError:
-        # 尝试将整个输入作为 query 参数
         return tool.invoke({"query": action_input})
     except Exception as e:
         return f"工具执行失败: {str(e)}"
 
 
 def build_tools_description() -> str:
-    """
-    构建工具描述文本，用于 Prompt。
-    @return: 工具描述字符串
+    """构建工具描述文本，用于 Prompt
+
+    Returns:
+        工具描述字符串
     """
     lines = []
     for tool in tools:
@@ -65,10 +106,13 @@ def build_tools_description() -> str:
 
 
 async def react_node(state):
-    """
-    ReAct 节点：自主推理 + 工具调用循环。
-    @param state: AgentState
-    @return: 更新后的 AgentState
+    """ReAct 节点：自主推理 + 工具调用循环
+
+    Args:
+        state: AgentState
+
+    Returns:
+        更新后的 AgentState
     """
     # 一、获取用户消息
     user_message = None
@@ -129,8 +173,7 @@ async def react_node(state):
         logger.info(f"[react_node] 工具结果: {observation[:200]}...")
 
         # 7、将结果加入对话
-        conversation.append(HumanMessage(
-            content=f"Observation: {observation}"))
+        conversation.append(HumanMessage(content=f"Observation: {observation}"))
 
     # 四、如果没有获得最终答案，使用最后一次 LLM 输出
     if not final_answer:
@@ -142,35 +185,3 @@ async def react_node(state):
     state.current_node = "react"
 
     return state
-
-
-def parse_content(content: str | list) -> str:
-    """解析 LLM 返回内容，兼容字符串和结构化输出"""
-    if isinstance(content, str):
-        return content
-    if isinstance(content, list):
-        parts = []
-        for item in content:
-            if isinstance(item, str):
-                parts.append(item)
-            elif isinstance(item, dict):
-                parts.append(str(item.get("text", "")))
-        return "".join(parts)
-    return str(content)
-
-
-def parse_action(text: str) -> tuple[str, str] | None:
-    """
-    从 LLM 输出中解析 Action 和 Action Input。
-    @param text: LLM 输出文本
-    @return: (action, action_input) 或 None
-    """
-    # 一、匹配 Action
-    action_match = re.search(r"Action:\s*(.+?)(?:\n|$)", text)
-    input_match = re.search(r"Action Input:\s*(.+?)(?:\n|$)", text)
-
-    if action_match and input_match:
-        action = action_match.group(1).strip()
-        action_input = input_match.group(1).strip()
-        return action, action_input
-    return None

@@ -3,7 +3,7 @@ from pathlib import Path
 from dataclasses import dataclass
 from langchain_core.documents import Document
 from config.logger import logger
-from ..schemas.rag import FileType
+from schemas.rag import FileType
 from .ingestion.markdown_loader import markdown_loader
 from .ingestion.markdown_splitter import markdown_splitter
 from .ingestion.doc_store import doc_store
@@ -24,13 +24,23 @@ class RAGPipeline:
     """RAG 管道：离线入库 + 在线检索"""
 
     def __init__(self, deps: RAGDependencies):
+        """
+        Args:
+            deps: RAG 管道依赖
+        """
         self.deps = deps
 
     def get_loader(self, file_name: str):
-        """
-        根据文件名扩展名匹配加载器。
-        @param file_name: 文件名
-        @return: 对应的加载器
+        """根据文件名扩展名匹配加载器
+
+        Args:
+            file_name: 文件名
+
+        Returns:
+            对应的加载器
+
+        Raises:
+            ValueError: 不支持的文件格式
         """
         suffix = Path(file_name).suffix.lower()
         try:
@@ -38,18 +48,20 @@ class RAGPipeline:
         except ValueError:
             raise ValueError(f"不支持的文件格式: {suffix}")
 
-        # 一、Markdown 加载器
         if file_type == FileType.MD:
             return markdown_loader
 
         raise ValueError(f"未配置加载器: {file_type.value}")
 
     def ingest(self, content: str, file_name: str) -> int:
-        """
-        离线入库流程：直接接收文件内容。
-        @param content: 文件内容
-        @param file_name: 文件名
-        @return: 入库的 chunk 数量
+        """离线入库流程：直接接收文件内容
+
+        Args:
+            content: 文件内容
+            file_name: 文件名
+
+        Returns:
+            入库的 chunk 数量
         """
         logger.info(f"开始入库: {file_name}")
 
@@ -69,39 +81,35 @@ class RAGPipeline:
             chunks.extend(markdown_splitter.split(doc))
         logger.info(f"切割完成: {len(chunks)} 个 chunk")
 
-        # 四、入库（原文 + 向量 + 关键词索引）
+        # 四、入库
         count = doc_store.ingest(chunks)
         logger.info(f"入库完成: {count} 个 chunk")
         return count
 
     def query(self, question: str) -> str:
-        """
-        在线检索流程。
-        @param question: 用户问题
-        @return: 回答文本
+        """在线检索流程
+
+        Args:
+            question: 用户问题
+
+        Returns:
+            回答文本
         """
         logger.info(f"开始检索: {question}")
 
         # 一、检索前：查询优化
-        # 1、查询改写：口语化 → 正式表述
         rewritten = self.deps.query_rewriter.rewrite(question)
-        # 2、查询扩展：生成多个相关查询
         queries = self.deps.query_expander.expand(rewritten)
         logger.info(f"检索前完成: {len(queries)} 个查询")
 
         # 二、检索中：多路检索
-        # 1、向量检索：Milvus 语义相似度（子块匹配）
         vector_docs = vector_retriever.search(queries)
-        # 2、BM25 检索：Elasticsearch 关键词匹配（子块匹配）
         bm25_docs = bm25_retriever.search(queries)
         logger.info(f"检索中完成: 向量 {len(vector_docs)} 条, BM25 {len(bm25_docs)} 条")
 
         # 三、检索后：融合与重排序
-        # 1、RRF 融合：多路结果加权合并
         fused = rrf_fuser.fuse(vector_docs, bm25_docs)
-        # 2、父子模式：用父块内容替换子块内容
         fused = self.replace_with_parent_context(fused)
-        # 3、重排序：Cross-Encoder 精排
         results = reranker.rerank(question, fused)
         logger.info(f"检索后完成: {len(results)} 条结果")
 
@@ -111,32 +119,35 @@ class RAGPipeline:
         return answer
 
     def replace_with_parent_context(self, docs: list[dict]) -> list[dict]:
+        """父子模式：用父块内容替换子块内容
+
+        Args:
+            docs: 子块检索结果
+
+        Returns:
+            父块内容列表
         """
-        父子模式：用父块内容替换子块内容。
-        @param docs: 子块检索结果
-        @return: 父块内容列表
-        """
-        # 一、按 parent_index 去重
         seen = set()
         unique_docs = []
         for doc in docs:
             parent_index = doc.get("metadata", {}).get("parent_index")
             if parent_index is not None and parent_index not in seen:
                 seen.add(parent_index)
-                # 二、用父块内容替换
                 parent_content = doc.get("metadata", {}).get("parent_content", "")
                 if parent_content:
                     doc["content"] = parent_content
                 unique_docs.append(doc)
-
         return unique_docs
 
     def generate(self, question: str, context: list[dict]) -> str:
-        """
-        生成回答。
-        @param question: 用户问题
-        @param context: 检索到的上下文
-        @return: 回答文本
+        """生成回答
+
+        Args:
+            question: 用户问题
+            context: 检索到的上下文
+
+        Returns:
+            回答文本
         """
         # TODO: 接入 LLM 生成
         return "暂未实现"
@@ -151,5 +162,5 @@ def create_rag_pipeline() -> RAGPipeline:
     return RAGPipeline(deps)
 
 
-# 模块级单例（默认实例）
+# 模块级单例
 rag_pipeline = create_rag_pipeline()

@@ -8,12 +8,10 @@ class BM25Retriever:
     """BM25 检索器：多 query 检索 Elasticsearch"""
 
     def __init__(self):
-        # 一、连接 Elasticsearch
         self.es = Elasticsearch(settings.es_hosts)
         self.index = settings.es_index_name
         logger.info(f"Elasticsearch 已连接: {settings.es_hosts}")
 
-        # 二、确保索引存在
         self.ensure_index()
 
     def ensure_index(self):
@@ -21,7 +19,6 @@ class BM25Retriever:
         if self.es.indices.exists(index=self.index):
             return
 
-        # 一、定义 mapping
         mapping = {
             "mappings": {
                 "properties": {
@@ -41,12 +38,13 @@ class BM25Retriever:
         logger.info(f"ES 索引已创建: {self.index}")
 
     def index_doc(self, pg_id: int, content: str, doc_hash: str = "", chunk_index: int = 0):
-        """
-        索引一条文档。
-        @param pg_id: PostgreSQL 主键
-        @param content: 文本内容
-        @param doc_hash: 文档哈希
-        @param chunk_index: 块序号
+        """索引一条文档
+
+        Args:
+            pg_id: PostgreSQL 主键
+            content: 文本内容
+            doc_hash: 文档哈希
+            chunk_index: 块序号
         """
         self.es.index(
             index=self.index,
@@ -60,16 +58,18 @@ class BM25Retriever:
         )
 
     def search(self, queries: list[str], top_k: int = 5) -> list[dict]:
-        """
-        多 query BM25 检索。
-        @param queries: 查询列表
-        @param top_k: 每个 query 返回数量
-        @return: 合并去重后的结果 [{pg_id, content, score, source}, ...]
+        """多 query BM25 检索
+
+        Args:
+            queries: 查询列表
+            top_k: 每个 query 返回数量
+
+        Returns:
+            合并去重后的结果 [{pg_id, content, score, source}, ...]
         """
         all_hits = []
 
         for query in queries:
-            # 一、ES match 查询（IK 分词）
             body = {
                 "query": {
                     "match": {
@@ -83,7 +83,6 @@ class BM25Retriever:
             }
             resp = self.es.search(index=self.index, body=body)
 
-            # 二、解析结果
             for hit in resp.get("hits", {}).get("hits", []):
                 source = hit.get("_source", {})
                 all_hits.append({
@@ -93,7 +92,7 @@ class BM25Retriever:
                     "source": "bm25",
                 })
 
-        # 三、按 pg_id 去重，保留最高分
+        # 按 pg_id 去重，保留最高分
         seen = {}
         for hit in all_hits:
             pg_id = hit.get("pg_id")
@@ -107,19 +106,21 @@ class BM25Retriever:
         return results
 
     def delete(self, pg_id: int):
-        """
-        按 pg_id 删除文档。
-        @param pg_id: PostgreSQL 主键
+        """按 pg_id 删除文档
+
+        Args:
+            pg_id: PostgreSQL 主键
         """
         try:
             self.es.delete(index=self.index, id=str(pg_id))
         except Exception:
-            pass  # 文档不存在时忽略
+            pass
 
     def delete_by_doc_hash(self, doc_hash: str):
-        """
-        按文档哈希删除所有相关文档。
-        @param doc_hash: 文档哈希
+        """按文档哈希删除所有相关文档
+
+        Args:
+            doc_hash: 文档哈希
         """
         self.es.delete_by_query(
             index=self.index,
