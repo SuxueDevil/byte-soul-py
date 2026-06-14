@@ -3,7 +3,7 @@ import hashlib
 from langchain_core.documents import Document
 from config.settings import settings
 from config.logger import logger
-from schemas.rag import ChunkMode
+from agent.schemas.rag import ChunkMode
 
 
 class DocStore:
