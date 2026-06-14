@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from langchain_core.messages import HumanMessage, AIMessage
 from api.schemas.chat import ChatChunk, ChatRequest
 
-# OpenAI role → LangChain 消息类型映射（system 由服务端 prompt 管理，不接收客户端传入）
+# OpenAI role → LangChain 消息类型映射
 _ROLE_MAP = {
     "user": HumanMessage,
     "assistant": AIMessage,
@@ -26,28 +26,35 @@ class AgentService:
         self.deps = deps
 
     def _to_lc_messages(self, messages: list[ChatRequest.Message]):
-        # 将 OpenAI 消息列表转为 LangChain 消息，过滤客户端 system 消息
+        """将 OpenAI 消息列表转为 LangChain 消息
+
+        Args:
+            messages: OpenAI 格式消息列表
+        """
         return [_ROLE_MAP[m.role](content=m.content) for m in messages if m.role != "system"]
 
     async def chat(self, request: ChatRequest):
-        """
-        流式对话接口。
-        @param request: ChatRequest，OpenAI chat.completions 格式
-        @yield: ChatChunk 实例
+        """流式对话接口
+
+        Args:
+            request: ChatRequest，OpenAI chat.completions 格式
+
+        Yields:
+            ChatChunk 实例
         """
         # 一、构建运行配置
-        # 1、user 映射到 thread_id，同一用户共享一条 Thread；未传则自动生成，不持久化
+        # 1、user 映射到 thread_id，同一用户共享一条 Thread
         user_id = request.user or f"anon-{uuid.uuid4().hex[:8]}"
         config = {"configurable": {"thread_id": user_id}}
 
         # 二、OpenAI 事件公共字段
         # 1、id 回传 user 或自动生成的标识
         chat_id = user_id
-        # 2、created 为请求创建时的 Unix 时间戳（秒），同一请求所有帧共享
+        # 2、created 为请求创建时的 Unix 时间戳（秒）
         created = int(time.time())
         # 3、客户端可指定模型，未指定则用默认值
         model = request.model or "YanXiaoYu"
-        # 4、first_chunk 标记是否为首帧，首帧需在 delta 中附带 role: "assistant"
+        # 4、first_chunk 标记是否为首帧
         first_chunk = True
 
         # 三、流式执行
@@ -77,7 +84,7 @@ class AgentService:
                     )
 
         # 四、发送结束帧
-        # 1、finish_reason 为 stop，通知客户端流结束；未产生任何流式内容时仍需补 role
+        # 1、finish_reason 为 stop，通知客户端流结束
         delta = ChatChunk.Delta(role="assistant") if first_chunk else ChatChunk.Delta()
         yield ChatChunk(
             id=chat_id,
