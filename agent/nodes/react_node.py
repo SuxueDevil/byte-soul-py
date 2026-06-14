@@ -1,28 +1,14 @@
 """ReAct 节点：自主推理 + 工具调用循环"""
 from langchain_core.messages import SystemMessage, HumanMessage, AIMessage, BaseMessage
 
-from config.llm import llm_no_stream
+from config.llm import llm
 from config.logger import logger
 from agent.prompts import REACT_PROMPT
-from agent.react import build_tools_description, parse_action, parse_final_answer, execute_tool
+from agent.tools import tool_executor
+from agent.react import parse_action, parse_final_answer, execute_tool
 
 # ReAct 最大循环次数
 MAX_ITERATIONS = 3
-
-
-def parse_content(content: str | list) -> str:
-    """解析 LLM 返回内容，兼容字符串和结构化输出"""
-    if isinstance(content, str):
-        return content
-    if isinstance(content, list):
-        parts = []
-        for item in content:
-            if isinstance(item, str):
-                parts.append(item)
-            elif isinstance(item, dict):
-                parts.append(str(item.get("text", "")))
-        return "".join(parts)
-    return str(content)
 
 
 async def react_node(state):
@@ -44,7 +30,7 @@ async def react_node(state):
         return state
 
     # 二、构建 ReAct Prompt
-    tools_desc = build_tools_description()
+    tools_desc = tool_executor.get_tool_descriptions()
     system_prompt = REACT_PROMPT.format(tools=tools_desc)
 
     # 三、ReAct 循环
@@ -60,8 +46,8 @@ async def react_node(state):
         messages.append(HumanMessage(content=user_message))
         messages.extend(conversation)
 
-        # 2、调用 LLM
-        response = await llm_no_stream.ainvoke(messages)
+        # 2、调用 LLM（流式）
+        response = await llm.ainvoke(messages)
         llm_output = parse_content(response.content)
         logger.info(f"[react_node] LLM 输出:\n{llm_output}")
 
@@ -90,7 +76,8 @@ async def react_node(state):
         logger.info(f"[react_node] 工具结果: {observation[:200]}...")
 
         # 7、将结果加入对话
-        conversation.append(HumanMessage(content=f"Observation: {observation}"))
+        conversation.append(HumanMessage(
+            content=f"Observation: {observation}"))
 
     # 四、如果没有获得最终答案，使用最后一次 LLM 输出
     if not final_answer:
@@ -102,3 +89,18 @@ async def react_node(state):
     state.current_node = "react"
 
     return state
+
+
+def parse_content(content: str | list) -> str:
+    """解析 LLM 返回内容，兼容字符串和结构化输出"""
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        parts = []
+        for item in content:
+            if isinstance(item, str):
+                parts.append(item)
+            elif isinstance(item, dict):
+                parts.append(str(item.get("text", "")))
+        return "".join(parts)
+    return str(content)
