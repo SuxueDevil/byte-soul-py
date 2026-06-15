@@ -1,13 +1,13 @@
 """RAG 管道：串联全部核心步骤"""
-from pathlib import Path
 from dataclasses import dataclass
 from functools import lru_cache
-from langchain_core.documents import Document
 from config.logger import logger
-from agent.schemas.rag import FileType
 
 from agent.rag.pre.query_rewriter import QueryRewriter
 from agent.rag.pre.query_expansion import QueryExpander
+from agent.rag.ingestion.loader import Loader
+from agent.rag.ingestion.spliter import Spilter
+from agent.rag.ingestion.saver import Saver
 
 
 @dataclass
@@ -24,10 +24,10 @@ class RAGPipeline:
         self.deps = deps
 
     def ingest(self, content: str, file_name: str) -> int:
-        """离线入库流程：直接接收文件内容
+        """离线入库流程
 
         Args:
-            content: 文件内容
+            content: 文件路径
             file_name: 文件名
 
         Returns:
@@ -35,19 +35,22 @@ class RAGPipeline:
         """
         logger.info(f"[RagPipeline] 开始入库: {file_name}")
 
-        # 一、根据文件类型匹配加载器
+        # 一、根据文件类型 加载、切割、入库
+        # 1、match 匹配文件类型
         match file_name:
-            case _ if file_name.endswith((".md", ".markdown")):
-                pass
+            # 2、对应 Loader / Spilter / Saver 串联执行
+            case "markdown" | "md":
+                count = Saver.markdown(Spilter.markdown(Loader.markdown(content)))
+            case "pdf":
+                count = Saver.pdf(Spilter.pdf(Loader.pdf(content)))
+            case "word" | "docx":
+                count = Saver.word(Spilter.word(Loader.word(content)))
+            case _:
+                logger.warning(f"[RagPipeline] 不支持的文件类型: {file_name}")
+                return 0
 
-        # 二、加载文档
-        pass
-
-        # 三、切割文档
-        pass
-
-        # 四、入库
-        pass
+        logger.info(f"[RagPipeline] 入库完成: {file_name} → {count} 个 chunk")
+        return count
 
     def query(self, question: str) -> str:
         """在线检索流程
