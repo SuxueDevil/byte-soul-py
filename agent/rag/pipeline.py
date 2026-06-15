@@ -5,13 +5,9 @@ from functools import lru_cache
 from langchain_core.documents import Document
 from config.logger import logger
 from agent.schemas.rag import FileType
-from .ingestion.markdown_loader import markdown_loader
-from .ingestion.markdown_splitter import markdown_splitter
-from .ingestion.doc_store import doc_store
-from .pre_retrieval.query_rewriter import QueryRewriter
-from .pre_retrieval.query_expansion import QueryExpander
-from .mid_retrieval import vector_retriever, bm25_retriever
-from .post_retrieval import rrf_fuser, reranker
+
+from agent.rag.pre.query_rewriter import QueryRewriter
+from agent.rag.pre.query_expansion import QueryExpander
 
 
 @dataclass
@@ -25,34 +21,7 @@ class RAGPipeline:
     """RAG 管道：离线入库 + 在线检索"""
 
     def __init__(self, deps: RAGDependencies):
-        """
-        Args:
-            deps: RAG 管道依赖
-        """
         self.deps = deps
-
-    def get_loader(self, file_name: str):
-        """根据文件名扩展名匹配加载器
-
-        Args:
-            file_name: 文件名
-
-        Returns:
-            对应的加载器
-
-        Raises:
-            ValueError: 不支持的文件格式
-        """
-        suffix = Path(file_name).suffix.lower()
-        try:
-            file_type = FileType(suffix)
-        except ValueError:
-            raise ValueError(f"不支持的文件格式: {suffix}")
-
-        if file_type == FileType.MD:
-            return markdown_loader
-
-        raise ValueError(f"未配置加载器: {file_type.value}")
 
     def ingest(self, content: str, file_name: str) -> int:
         """离线入库流程：直接接收文件内容
@@ -67,25 +36,18 @@ class RAGPipeline:
         logger.info(f"[RagPipeline] 开始入库: {file_name}")
 
         # 一、根据文件类型匹配加载器
-        loader = self.get_loader(file_name)
+        match file_name:
+            case _ if file_name.endswith((".md", ".markdown")):
+                pass
 
         # 二、加载文档
-        documents = loader.load(content, file_name)
-        if not documents:
-            logger.warning(f"[RagPipeline] 加载失败: {file_name}")
-            return 0
-        logger.info(f"[RagPipeline] 加载完成: {len(documents)} 个文档")
+        pass
 
         # 三、切割文档
-        chunks = []
-        for doc in documents:
-            chunks.extend(markdown_splitter.split(doc))
-        logger.info(f"[RagPipeline] 切割完成: {len(chunks)} 个 chunk")
+        pass
 
         # 四、入库
-        count = doc_store.ingest(chunks)
-        logger.info(f"[RagPipeline] 入库完成: {count} 个 chunk")
-        return count
+        pass
 
     def query(self, question: str) -> str:
         """在线检索流程
@@ -106,10 +68,12 @@ class RAGPipeline:
         # 二、检索中：多路检索
         vector_docs = vector_retriever.search(queries)
         bm25_docs = bm25_retriever.search(queries)
-        logger.info(f"[RagPipeline] 检索中完成: 向量 {len(vector_docs)} 条, BM25 {len(bm25_docs)} 条")
+        logger.info(
+            f"[RagPipeline] 检索中完成: 向量 {len(vector_docs)} 条, BM25 {len(bm25_docs)} 条")
 
         # 三、检索后：融合与重排序
         fused = rrf_fuser.fuse(vector_docs, bm25_docs)
+        # ？
         fused = self.replace_with_parent_context(fused)
         results = reranker.rerank(question, fused)
         logger.info(f"[RagPipeline] 检索后完成: {len(results)} 条结果")
@@ -140,19 +104,6 @@ class RAGPipeline:
                     doc["content"] = parent_content
                 unique_docs.append(doc)
         return unique_docs
-
-    def generate(self, question: str, context: list[dict]) -> str:
-        """生成回答
-
-        Args:
-            question: 用户问题
-            context: 检索到的上下文
-
-        Returns:
-            回答文本
-        """
-        # TODO: 接入 LLM 生成
-        return "暂未实现"
 
 
 @lru_cache(maxsize=1)
