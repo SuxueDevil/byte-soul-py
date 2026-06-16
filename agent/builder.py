@@ -48,6 +48,4 @@ class AgentGraphBuilder:
         return state_graph.compile(checkpointer=checkpointer, store=None)
 
 
-# 一、模块级单例
-# 1、import 时即 build，LangGraph 图编译可能慢，符合 fail-fast 预期
 agent = AgentGraphBuilder().build()

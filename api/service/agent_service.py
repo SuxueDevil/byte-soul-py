@@ -1,7 +1,6 @@
 """Agent 服务：接收 OpenAI 请求，返回 OpenAI 格式的流式 ChatChunk"""
 import time
 import uuid
-from dataclasses import dataclass
 
 from langchain_core.messages import HumanMessage, AIMessage
 from langgraph.graph.state import CompiledStateGraph
@@ -16,17 +15,11 @@ _ROLE_MAP = {
 }
 
 
-@dataclass(frozen=True)
-class AgentServiceDependencies:
-    """Agent 服务依赖"""
-    agent: CompiledStateGraph
-
-
 class AgentService:
     """Agent 服务层：接收 OpenAI 请求，返回 OpenAI 格式的流式 ChatChunk"""
 
-    def __init__(self, deps: AgentServiceDependencies) -> None:
-        self.deps = deps
+    def __init__(self, agent: CompiledStateGraph) -> None:
+        self.agent = agent
 
     def _to_lc_messages(self, messages: list[ChatRequest.Message]):
         """将 OpenAI 消息列表转为 LangChain 消息
@@ -56,7 +49,7 @@ class AgentService:
         first_chunk = True
 
         # 三、流式执行
-        async for event in self.deps.agent.astream_events(
+        async for event in self.agent.astream_events(
             {"messages": self._to_lc_messages(request.messages)},
             config,
             version="v2",
@@ -86,8 +79,4 @@ class AgentService:
         )
 
 
-# 一、模块级单例
-# 1、import 时即建，LangGraph 图已在 agent.builder 编译好
-agentService = AgentService(
-    AgentServiceDependencies(agent=agent)
-)
+agentService = AgentService(agent)

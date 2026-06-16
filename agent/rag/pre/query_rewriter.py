@@ -38,4 +38,4 @@ class QueryRewriter:
 
 
 # 模块级单例
-query_rewriter = QueryRewriter()
+queryRewriter = QueryRewriter()

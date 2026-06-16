@@ -19,7 +19,7 @@ doc_hash = hashlib.md5(content).hexdigest()
 
 ## 代码结构
 
-- **类结构**：类变量 → `__init__` → 公有方法（私有方法在公有方法之后）
+- **类结构**：公有方法（私有方法在公有方法之后）
 - **条件判断**：避免大段 if else，用 early return / 枚举类 / 字典映射
 
 ## 设计模式
@@ -32,7 +32,6 @@ doc_hash = hashlib.md5(content).hexdigest()
 |---|---|---|
 | 客户端 | `xxxTemplate` | `mysqlTemplate` / `milvusTemplate` / `esTemplate` |
 | 业务服务 | `xxxService` / `xxxPipeline` | `userService` / `ragService` / `agentService` / `ragPipeline` |
-| 图 | 无后缀 | `agent` |
 
 ```python
 # config/database.py
@@ -41,22 +40,13 @@ milvusTemplate = MilvusClient(host=..., port=...)
 esTemplate = Elasticsearch(hosts=[...])
 
 # api/service/user_service.py
-@dataclass(frozen=True)
-class UserServiceDependencies:
-    database: Database
-
 class UserService:
-    def __init__(self, deps: UserServiceDependencies) -> None:
-        self.deps = deps
+    def __init__(self, database: Database) -> None:
+        self.database = database
 
-# 一、模块级单例
-userService = UserService(UserServiceDependencies(database=mysqlTemplate))
+userService = UserService(mysqlTemplate)
 
-# agent/builder.py
-agent = AgentGraphBuilder().build()
 ```
-
-> `MilvusClient` / `Elasticsearch` 构造函数不立刻 TCP 握手，对启动速度影响极小。真"重"的只有 MySQL `create_async_engine`——但启动就建反而是好事，配置错立刻暴露。
 
 ### 路由：直接 import
 

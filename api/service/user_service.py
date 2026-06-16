@@ -1,22 +1,14 @@
 """用户服务层：封装用户相关的业务逻辑与数据库操作"""
-from dataclasses import dataclass
-
 from config.database import Database, mysqlTemplate
 from api.schemas.user import UserDTO, UserVO
 from api.models.user import User
 
 
-@dataclass(frozen=True)
-class UserServiceDependencies:
-    """用户服务依赖"""
-    database: Database
-
-
 class UserService:
     """用户服务层：封装用户相关的业务逻辑与数据库操作"""
 
-    def __init__(self, deps: UserServiceDependencies) -> None:
-        self.deps = deps
+    def __init__(self, database: Database) -> None:
+        self.database = database
 
     async def get_user(self, user_id: int) -> UserVO:
         """
@@ -38,7 +30,7 @@ class UserService:
         """
         # 一、写入数据库
         # 1、构建 ORM 对象
-        async with self.deps.database.session() as db:
+        async with self.database.session() as db:
             user = User(name=dto.name, email=dto.email, age=dto.age)
             db.add(user)
             await db.commit()
@@ -47,8 +39,4 @@ class UserService:
             return True
 
 
-# 一、模块级单例
-# 1、import 时即建，MySQL 客户端已经 fail-fast 验过连通性
-userService = UserService(
-    UserServiceDependencies(database=mysqlTemplate)
-)
+userService = UserService(mysqlTemplate)

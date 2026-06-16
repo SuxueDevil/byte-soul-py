@@ -1,26 +1,15 @@
 """RAG 管道：串联全部核心步骤"""
-from dataclasses import dataclass
 from config.logger import logger
 
-from agent.rag.pre.query_rewriter import QueryRewriter
-from agent.rag.pre.query_expansion import QueryExpander
+from agent.rag.pre.query_rewriter import queryRewriter
+from agent.rag.pre.query_expansion import queryExpander
 from agent.rag.ingestion.loader import Loader
 from agent.rag.ingestion.spliter import Spilter
 from agent.rag.ingestion.saver import Saver
 
 
-@dataclass
-class RAGDependencies:
-    """RAG 管道依赖"""
-    query_rewriter: QueryRewriter
-    query_expander: QueryExpander
-
-
 class RAGPipeline:
     """RAG 管道：离线入库 + 在线检索"""
-
-    def __init__(self, deps: RAGDependencies):
-        self.deps = deps
 
     def ingest(self, content: str, file_name: str) -> int:
         """离线入库流程
@@ -68,8 +57,9 @@ class RAGPipeline:
         logger.info(f"[RagPipeline] 开始检索: {question}")
 
         # 一、检索前：查询优化
-        rewritten = self.deps.query_rewriter.rewrite(question)
-        queries = self.deps.query_expander.expand(rewritten)
+        # 1、queryRewriter / queryExpander 是无状态工具，直接 import 用
+        rewritten = queryRewriter.rewrite(question)
+        queries = queryExpander.expand(rewritten)
         logger.info(f"[RagPipeline] 检索前完成")
 
         # 二、检索中：多路检索
@@ -113,11 +103,4 @@ class RAGPipeline:
         return unique_docs
 
 
-# 一、模块级单例
-# 1、import 时即建，QueryRewriter / QueryExpander 都是无状态工具，建造成本极低
-ragPipeline = RAGPipeline(
-    RAGDependencies(
-        query_rewriter=QueryRewriter(),
-        query_expander=QueryExpander(),
-    )
-)
+ragPipeline = RAGPipeline()

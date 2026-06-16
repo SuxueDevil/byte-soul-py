@@ -47,4 +47,4 @@ class QueryExpander:
 
 
 # 模块级单例
-query_expander = QueryExpander()
+queryExpander = QueryExpander()
