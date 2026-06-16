@@ -2,14 +2,11 @@
 import time
 import uuid
 from dataclasses import dataclass
-from functools import lru_cache
-from typing import Annotated
 
-from fastapi import Depends
 from langchain_core.messages import HumanMessage, AIMessage
 from langgraph.graph.state import CompiledStateGraph
 
-from agent.builder import get_agent
+from agent.builder import agent
 from api.schemas.chat import ChatChunk, ChatRequest
 
 # OpenAI role → LangChain 消息类型映射
@@ -89,11 +86,8 @@ class AgentService:
         )
 
 
-@lru_cache(maxsize=1)
-def get_agent_service() -> AgentService:
-    """构建 Agent 服务单例"""
-    deps = AgentServiceDependencies(agent=get_agent())
-    return AgentService(deps)
-
-
-AgentServiceDep = Annotated[AgentService, Depends(get_agent_service)]
+# 一、模块级单例
+# 1、import 时即建，LangGraph 图已在 agent.builder 编译好
+agentService = AgentService(
+    AgentServiceDependencies(agent=agent)
+)

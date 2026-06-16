@@ -12,7 +12,6 @@ class UserDTO(BaseModel):
 
 class UserVO(BaseModel):
     """用户信息响应体"""
-    id: Optional[int] = Field(None, description="用户ID")
     name: Optional[str] = Field(None, description="姓名")
     email: Optional[str] = Field(None, description="邮箱")
     age: Optional[int] = Field(None, description="年龄")

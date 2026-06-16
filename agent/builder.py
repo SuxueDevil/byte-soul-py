@@ -1,6 +1,4 @@
 """LangGraph 状态图构建器"""
-from functools import lru_cache
-
 from langgraph.graph import END, StateGraph
 
 from .memory.checkpointer import checkpointer
@@ -50,7 +48,6 @@ class AgentGraphBuilder:
         return state_graph.compile(checkpointer=checkpointer, store=None)
 
 
-@lru_cache(maxsize=1)
-def get_agent():
-    """懒构建并返回 LangGraph 图(进程级单例,首次调用时执行 build)"""
-    return AgentGraphBuilder().build()
+# 一、模块级单例
+# 1、import 时即 build，LangGraph 图编译可能慢，符合 fail-fast 预期
+agent = AgentGraphBuilder().build()

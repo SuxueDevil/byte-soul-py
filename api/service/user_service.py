@@ -1,11 +1,7 @@
 """用户服务层：封装用户相关的业务逻辑与数据库操作"""
 from dataclasses import dataclass
-from functools import lru_cache
-from typing import Annotated
 
-from fastapi import Depends
-
-from config.database import Database, database
+from config.database import Database, mysqlTemplate
 from api.schemas.user import UserDTO, UserVO
 from api.models.user import User
 
@@ -28,7 +24,11 @@ class UserService:
         @param user_id: 用户主键 ID
         @return: UserVO 响应对象
         """
-        pass
+        return UserVO(
+            name="张三",
+            email="zhangsan@example.com",
+            age=30
+        )
 
     async def create_user(self, dto: UserDTO) -> bool:
         """
@@ -47,11 +47,8 @@ class UserService:
             return True
 
 
-@lru_cache(maxsize=1)
-def get_user_service() -> UserService:
-    """构建用户服务单例"""
-    deps = UserServiceDependencies(database=database)
-    return UserService(deps)
-
-
-UserServiceDep = Annotated[UserService, Depends(get_user_service)]
+# 一、模块级单例
+# 1、import 时即建，MySQL 客户端已经 fail-fast 验过连通性
+userService = UserService(
+    UserServiceDependencies(database=mysqlTemplate)
+)

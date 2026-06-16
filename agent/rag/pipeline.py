@@ -1,6 +1,5 @@
 """RAG 管道：串联全部核心步骤"""
 from dataclasses import dataclass
-from functools import lru_cache
 from config.logger import logger
 
 from agent.rag.pre.query_rewriter import QueryRewriter
@@ -35,19 +34,24 @@ class RAGPipeline:
         """
         logger.info(f"[RagPipeline] 开始入库: {file_name}")
 
-        # 一、根据文件类型 加载、切割、入库
+        # 一、按文件类型 加载、切割
         # 1、match 匹配文件类型
         match file_name:
-            # 2、对应 Loader / Spilter / Saver 串联执行
+            # 2、对应 Loader / Spilter 串联执行
             case "markdown" | "md":
-                count = Saver.markdown(Spilter.markdown(Loader.markdown(content)))
+                chunks = Spilter.markdown(Loader.markdown(content))
             case "pdf":
-                count = Saver.pdf(Spilter.pdf(Loader.pdf(content)))
+                chunks = Spilter.pdf(Loader.pdf(content))
             case "word" | "docx":
-                count = Saver.word(Spilter.word(Loader.word(content)))
+                chunks = Spilter.word(Loader.word(content))
             case _:
                 logger.warning(f"[RagPipeline] 不支持的文件类型: {file_name}")
                 return 0
+
+        # 二、统一入库
+        # 1、与文件类型无关，chunks 已是 LangChain Document
+        # 2、双写 Milvus（向量） + ES（BM25）
+        count = Saver.save(chunks)
 
         logger.info(f"[RagPipeline] 入库完成: {file_name} → {count} 个 chunk")
         return count
@@ -109,11 +113,11 @@ class RAGPipeline:
         return unique_docs
 
 
-@lru_cache(maxsize=1)
-def get_rag_pipeline() -> RAGPipeline:
-    """懒构建 RAG 管道单例（首次调用时执行,之后永久复用）"""
-    deps = RAGDependencies(
+# 一、模块级单例
+# 1、import 时即建，QueryRewriter / QueryExpander 都是无状态工具，建造成本极低
+ragPipeline = RAGPipeline(
+    RAGDependencies(
         query_rewriter=QueryRewriter(),
         query_expander=QueryExpander(),
     )
-    return RAGPipeline(deps)
+)

@@ -3,8 +3,9 @@
 ## 命名规范
 
 - **类**：大驼峰；抽象类以 `Base` 开头（`BaseRetriever`）
-- **函数/方法**：小写 + 下划线（`load_documents`）；私有方法不加 `_`，位置在公有方法之后
+- **函数/方法**：小写 + 下划线（`load_documents`）
 - **配置项**：小写 + 下划线（`rag.chunk_size`）
+- **模块级单例**：小驼峰 + `Template` / `Service` / `Pipeline` 后缀（`mysqlTemplate` / `userService` / `ragPipeline`），对齐 Java `@Component` 风格
 
 ## 注释规范
 
@@ -23,58 +24,49 @@ doc_hash = hashlib.md5(content).hexdigest()
 
 ## 设计模式
 
-### 单例模式
+### 单例：全部模块级 + fail-fast
 
-| 类型 | 适用 | 关键 |
+客户端、业务服务、LangGraph 图**全部**用模块级单例，`import` 时建好。环境配错 / 资源不通 → 启动直接报错，绝不延迟到第一个请求。
+
+| 类型 | 命名 | 例子 |
 |---|---|---|
-| 模块级单例 | 仅轻量配置/日志 | ❌ 禁止用于重资源（LLM client、LangGraph 图、DB 连接池） |
-| `lru_cache(maxsize=1)` 工厂 | 重资源/业务服务 | 懒加载、可被 `dependency_overrides` 替换 |
-| 工厂模式 | 运行时按配置切换 | `EmbeddingFactory.create(config)` |
-
-### 依赖注入（FastAPI）
-
-业务服务用 **三件套**：`@lru_cache` 工厂 + `Annotated` 别名 + `dataclass(frozen=True)` 依赖包装。完整示例见 [api/service/agent_service.py](api/service/agent_service.py)。
-
-#### 标准写法
+| 客户端 | `xxxTemplate` | `mysqlTemplate` / `milvusTemplate` / `esTemplate` |
+| 业务服务 | `xxxService` / `xxxPipeline` | `userService` / `ragService` / `agentService` / `ragPipeline` |
+| 图 | 无后缀 | `agent` |
 
 ```python
-@dataclass(frozen=True)
-class AgentServiceDependencies:
-    agent: CompiledStateGraph              # 依赖都装进"箱子"
+# config/database.py
+mysqlTemplate = Database()
+milvusTemplate = MilvusClient(host=..., port=...)
+esTemplate = Elasticsearch(hosts=[...])
 
-class AgentService:
-    def __init__(self, deps: AgentServiceDependencies) -> None:
+# api/service/user_service.py
+@dataclass(frozen=True)
+class UserServiceDependencies:
+    database: Database
+
+class UserService:
+    def __init__(self, deps: UserServiceDependencies) -> None:
         self.deps = deps
 
-@lru_cache(maxsize=1)
-def _build_agent_service() -> AgentService:
-    return AgentService(AgentServiceDependencies(agent=get_agent()))
+# 一、模块级单例
+userService = UserService(UserServiceDependencies(database=mysqlTemplate))
 
-AgentServiceDep = Annotated[AgentService, Depends(_build_agent_service)]
+# agent/builder.py
+agent = AgentGraphBuilder().build()
 ```
 
-路由层 `agent_service: AgentServiceDep`(消费服务层别名,不再写 `= Depends(...)`)。
+> `MilvusClient` / `Elasticsearch` 构造函数不立刻 TCP 握手，对启动速度影响极小。真"重"的只有 MySQL `create_async_engine`——但启动就建反而是好事，配置错立刻暴露。
 
-#### ❌ 反模式 + 迁移陷阱
-
-- `service: X = Depends(get_x)` 老式写法——混用 `Annotated` 时触发 `SyntaxError`(别名**没有 Python 默认值**,必须排在 `File(...)` 之前)
-- `Depends(Class)` 让框架帮你 `new`——无法注入复杂依赖
-- 模块级 `service = Service(...)`——不可懒加载、不可测
-- 基础设施层导 `XxxDep` 别名——无消费者,纯污染
-
-#### 分层与别名导出
-
-| 层 | 是否导出 `XxxDep` |
-|---|---|
-| 基础设施（`agent/builder.py`、`config/database.py`） | ❌ |
-| 服务（`api/service/xxx_service.py`） | ✅ **必须导出** |
-| 路由（`api/controller/xxx_controller.py`） | ❌ 消费服务层别名 |
-
-#### 测试覆盖
+### 路由：直接 import
 
 ```python
-app.dependency_overrides[_build_agent_service] = lambda: FakeAgentService()
-get_agent.cache_clear()
+# api/controller/user_controller.py
+from api.service.user_service import userService
+
+@user_router.get("/{user_id}")
+async def get_user(user_id: int):
+    return Response.success(await userService.get_user(user_id))
 ```
 
 ## 类型校验

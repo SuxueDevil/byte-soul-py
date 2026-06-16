@@ -8,8 +8,8 @@ class Saver:
     """入库器：Milvus（向量）+ Elasticsearch（BM25）双写"""
 
     @staticmethod
-    def markdown(chunks: list[Document]) -> int:
-        """入库 Markdown 文档
+    def save(chunks: list[Document]) -> int:
+        """入库 chunk
 
         Args:
             chunks: 切割后的 Document 列表
@@ -17,35 +17,6 @@ class Saver:
         Returns:
             实际入库数量
         """
-        return Saver._save(chunks)
-
-    @staticmethod
-    def pdf(chunks: list[Document]) -> int:
-        """入库 PDF 文档
-
-        Args:
-            chunks: 切割后的 Document 列表
-
-        Returns:
-            实际入库数量
-        """
-        return Saver._save(chunks)
-
-    @staticmethod
-    def word(chunks: list[Document]) -> int:
-        """入库 Word 文档
-
-        Args:
-            chunks: 切割后的 Document 列表
-
-        Returns:
-            实际入库数量
-        """
-        return Saver._save(chunks)
-
-    @staticmethod
-    def _save(chunks: list[Document]) -> int:
-        """入库的内部实现"""
         # 一、空输入直接返回
         if not chunks:
             return 0

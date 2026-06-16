@@ -1,11 +1,7 @@
 """RAG 服务：文件上传入库"""
 from dataclasses import dataclass
-from functools import lru_cache
-from typing import Annotated
 
-from fastapi import Depends
-
-from agent.rag.pipeline import RAGPipeline, get_rag_pipeline
+from agent.rag.pipeline import RAGPipeline, ragPipeline
 from api.schemas.rag import FileDTO
 
 
@@ -33,11 +29,7 @@ class RagService:
         return self.deps.pipeline.ingest(text, file.filename)
 
 
-@lru_cache(maxsize=1)
-def get_rag_service() -> RagService:
-    """构建 RAG 服务单例"""
-    deps = RagServiceDependencies(pipeline=get_rag_pipeline())
-    return RagService(deps)
-
-
-RagServiceDep = Annotated[RagService, Depends(get_rag_service)]
+# 一、模块级单例
+ragService = RagService(
+    RagServiceDependencies(pipeline=ragPipeline)
+)

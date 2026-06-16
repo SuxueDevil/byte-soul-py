@@ -1,9 +1,15 @@
-"""数据库引擎和会话管理"""
+"""数据库与搜索引擎客户端"""
 from contextlib import asynccontextmanager
 
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
+from elasticsearch import Elasticsearch
+from pymilvus import MilvusClient
+from sqlalchemy.ext.asyncio import (
+    AsyncSession,
+    async_sessionmaker,
+    create_async_engine,
+)
 
-from .settings import settings
+from config.settings import settings
 
 
 class Database:
@@ -11,8 +17,8 @@ class Database:
 
     def __init__(self):
         url = (
-            f'mysql+asyncmy://{settings.mysql_user}:{settings.mysql_password}@'
-            f'{settings.mysql_host}:{settings.mysql_port}/{settings.mysql_database}'
+            f"mysql+asyncmy://{settings.mysql_user}:{settings.mysql_password}@"
+            f"{settings.mysql_host}:{settings.mysql_port}/{settings.mysql_database}"
         )
         self.engine = create_async_engine(
             url,
@@ -22,16 +28,28 @@ class Database:
             pool_timeout=settings.mysql_pool_timeout,
             max_overflow=settings.mysql_max_overflow,
         )
-        self.sessionmaker = async_sessionmaker(self.engine, class_=AsyncSession, expire_on_commit=False)
+        self.sessionmaker = async_sessionmaker(
+            self.engine,
+            class_=AsyncSession,
+            expire_on_commit=False,
+        )
 
     @asynccontextmanager
     async def session(self):
+        """获取异步 session
+
+        Yields:
+            AsyncSession 实例；退出上下文时自动 close
         """
-        获取异步 session，用 async with 自动管理生命周期。
-        @yield: AsyncSession 实例，退出上下文时自动 close
-        """
+        # 一、async with 自动管理 session 生命周期
+        # 1、退出上下文自动 close，避免连接泄漏
         async with self.sessionmaker() as s:
             yield s
 
 
-database = Database()
+mysqlTemplate = Database()
+milvusTemplate = MilvusClient(
+    host=settings.milvus_host,
+    port=settings.milvus_port,
+)
+esTemplate = Elasticsearch(settings.es_hosts)
