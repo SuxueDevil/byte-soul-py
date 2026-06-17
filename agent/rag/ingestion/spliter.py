@@ -41,18 +41,23 @@ class Spilter:
         Returns:
             子块 chunk 列表
         """
-        # 一、先按 parent_max_size 切父块
-        parent_splitter = RecursiveCharacterTextSplitter(
-            chunk_size=settings.rag_parent_max_size,
-            chunk_overlap=0,
-        )
-        parents = parent_splitter.split_documents(documents)
-        # 二、再切子块
-        return Spilter._build_children(parents)
+        return Spilter._recursive_parent_child(documents)
 
     @staticmethod
     def word(documents: list[Document]) -> list[Document]:
         """切割 Word - 按段落递归切分
+
+        Args:
+            documents: 待切割的 Document 列表
+
+        Returns:
+            子块 chunk 列表
+        """
+        return Spilter._recursive_parent_child(documents)
+
+    @staticmethod
+    def _recursive_parent_child(documents: list[Document]) -> list[Document]:
+        """通用递归切割：先切父块再切子块（PDF/Word 共用）
 
         Args:
             documents: 待切割的 Document 列表
