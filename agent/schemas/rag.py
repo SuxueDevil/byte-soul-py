@@ -11,12 +11,6 @@ class FileType(Enum):
     TXT = ".txt"
 
 
-class ChunkMode(Enum):
-    """切割模式"""
-    GENERAL = "general"           # 通用模式：单层切割
-    PARENT_CHILD = "parent_child" # 父子模式：双层切割
-
-
 @dataclass
 class ParentChunk:
     """父块：提供完整上下文"""

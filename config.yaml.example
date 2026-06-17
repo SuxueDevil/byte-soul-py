@@ -79,17 +79,12 @@ checkpointer:
 # RAG 多路检索配置
 # ------------------------------------------------------------
 rag:
-  # 切割模式：general（通用） / parent_child（父子）
-  chunk_mode: parent_child
   # 父子模式配置
   parent_delimiter: "\n\n"       # 父块分隔符
   parent_max_size: 2000          # 父块最大字符数
   child_delimiter: "\n\n"        # 子块分隔符
   child_max_size: 500            # 子块最大字符数
   child_overlap: 50              # 子块重叠字符数
-  # 通用模式配置（chunk_mode=general 时生效）
-  chunk_size: 500
-  chunk_overlap: 50
 
   # 嵌入模型（默认复用 LLM 配置）
   embedding:
