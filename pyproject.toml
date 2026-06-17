@@ -2,7 +2,7 @@
 name = "bytesoul"
 version = "0.1.0"
 description = "FastAPI + LangGraph RAG 助手"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 
 dependencies = [
     # Web 框架
@@ -43,6 +43,8 @@ dependencies = [
     "sentence-transformers==5.5.1",
     # Debug
     "debugpy<1.9",
+    "sonyflake>=2.0.2",
+    "asyncpg>=0.31.0",
 ]
 
 [tool.uv]

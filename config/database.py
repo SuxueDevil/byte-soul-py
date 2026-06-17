@@ -1,10 +1,12 @@
-"""数据库、搜索引擎、LLM、Embedding 客户端"""
+"""数据库、搜索引擎、LLM、Embedding、雪花ID 客户端"""
 from contextlib import asynccontextmanager
+from datetime import datetime, timezone
 
 from elasticsearch import Elasticsearch
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 from pydantic import SecretStr
 from pymilvus import MilvusClient
+from sonyflake import Sonyflake
 from sqlalchemy.ext.asyncio import (
     AsyncSession,
     async_sessionmaker,
@@ -84,4 +86,10 @@ llmNoStreamTemplate = ChatOpenAI(
     api_key=SecretStr(settings.llm_api_key),
     base_url=settings.llm_base_url,
     streaming=False,
+)
+
+# ─────────────────────────── 雪花 ID ───────────────────────────
+snowflakeTemplate = Sonyflake(
+    start_time=datetime(2024, 1, 1, tzinfo=timezone.utc),
+    machine_id=1,
 )
