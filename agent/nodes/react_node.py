@@ -4,7 +4,7 @@ import re
 
 from langchain_core.messages import SystemMessage, HumanMessage, AIMessage, BaseMessage
 
-from config.llm import llm
+from config.database import llmTemplate
 from config.logger import logger
 from config.prompts import REACT_PROMPT
 from agent.tools import tools
@@ -124,7 +124,7 @@ async def react_node_stream(state):
 
         # 2、调用 LLM（流式）
         full_content = ""
-        async for chunk in llm.astream(messages):
+        async for chunk in llmTemplate.astream(messages):
             if chunk.content:
                 # 流式 chunk.content 类型是 str | list,type: ignore 抑制 Pylance 警告
                 token = chunk.content  # type: ignore

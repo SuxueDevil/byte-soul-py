@@ -1,7 +1,7 @@
 """意图识别节点"""
 from langchain_core.messages import SystemMessage
 
-from config.llm import llm_no_stream
+from config.database import llmNoStreamTemplate
 from config.logger import logger
 from config.prompts import INTENT_PROMPT
 
@@ -17,7 +17,7 @@ async def intent_node(state):
     """
     # 一、意图分类
     user_message = state.messages[-1]
-    response = await llm_no_stream.ainvoke([
+    response = await llmNoStreamTemplate.ainvoke([
         SystemMessage(content=INTENT_PROMPT),
         user_message,
     ])

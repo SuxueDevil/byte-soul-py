@@ -1,7 +1,9 @@
-"""数据库与搜索引擎客户端"""
+"""数据库、搜索引擎、LLM、Embedding 客户端"""
 from contextlib import asynccontextmanager
 
 from elasticsearch import Elasticsearch
+from langchain_openai import ChatOpenAI, OpenAIEmbeddings
+from pydantic import SecretStr
 from pymilvus import MilvusClient
 from sqlalchemy.ext.asyncio import (
     AsyncSession,
@@ -59,3 +61,27 @@ milvusTemplate = MilvusClient(
 
 # ─────────────────────────── Elasticsearch ───────────────────────────
 esTemplate = Elasticsearch(settings.es_hosts)
+
+# ─────────────────────────── Embedding ───────────────────────────
+embeddingTemplate = OpenAIEmbeddings(
+    model=settings.embedding_model,
+    api_key=settings.embedding_api_key,
+    base_url=settings.embedding_base_url,
+)
+
+# ─────────────────────────── LLM ───────────────────────────
+# 一、流式实例，供对话等需要流式输出的场景使用
+llmTemplate = ChatOpenAI(
+    model=settings.llm_model,
+    api_key=SecretStr(settings.llm_api_key),
+    base_url=settings.llm_base_url,
+    streaming=True,
+)
+
+# 二、非流式实例，供意图分类等不需要流式输出的场景使用
+llmNoStreamTemplate = ChatOpenAI(
+    model=settings.llm_model,
+    api_key=SecretStr(settings.llm_api_key),
+    base_url=settings.llm_base_url,
+    streaming=False,
+)

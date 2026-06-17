@@ -1,5 +1,5 @@
 """查询改写：口语化 → 正式检索词"""
-from config.llm import llm_no_stream
+from config.database import llmNoStreamTemplate
 from config.logger import logger
 from config.prompts import REWRITE_PROMPT
 from langchain_core.messages import SystemMessage, HumanMessage
@@ -18,7 +18,7 @@ class QueryRewriter:
             改写后的查询，如果改写失败返回原始查询
         """
         try:
-            response = llm_no_stream.invoke([
+            response = llmNoStreamTemplate.invoke([
                 SystemMessage(content=REWRITE_PROMPT),
                 HumanMessage(content=query),
             ])

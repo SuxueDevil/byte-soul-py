@@ -1,5 +1,5 @@
 """查询扩展：生成多个语义相关查询，扩大召回"""
-from config.llm import llm_no_stream
+from config.database import llmNoStreamTemplate
 from config.logger import logger
 from config.prompts import EXPANSION_PROMPT
 from langchain_core.messages import SystemMessage, HumanMessage
@@ -20,7 +20,7 @@ class QueryExpander:
         """
         try:
             prompt = EXPANSION_PROMPT.format(count=count)
-            response = llm_no_stream.invoke([
+            response = llmNoStreamTemplate.invoke([
                 SystemMessage(content=prompt),
                 HumanMessage(content=query),
             ])
