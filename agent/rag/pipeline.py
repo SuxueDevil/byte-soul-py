@@ -1,4 +1,6 @@
 """RAG 管道：串联全部核心步骤"""
+from pathlib import Path
+
 from config.logger import logger
 
 from agent.rag.pre.query_rewriter import queryRewriter
@@ -15,7 +17,7 @@ class RAGPipeline:
         """离线入库流程
 
         Args:
-            content: 文件路径
+            content: 文件内容
             file_name: 文件名
 
         Returns:
@@ -23,24 +25,21 @@ class RAGPipeline:
         """
         logger.info(f"[RagPipeline] 开始入库: {file_name}")
 
-        # 一、按文件类型 加载、切割
-        # 1、match 匹配文件类型
-        match file_name:
-            # 2、对应 Loader / Spilter 串联执行
-            case "markdown" | "md":
-                chunks = Spilter.markdown(Loader.markdown(content))
-            case "pdf":
-                chunks = Spilter.pdf(Loader.pdf(content))
-            case "word" | "docx":
-                chunks = Spilter.word(Loader.word(content))
+        # 一、按文件扩展名匹配加载+切割
+        suffix = Path(file_name).suffix.lower()
+        match suffix:
+            case ".md" | ".markdown":
+                chunks = Spilter.markdown(Loader.markdown(file_name))
+            case ".pdf":
+                chunks = Spilter.pdf(Loader.pdf(file_name))
+            case ".docx" | ".word":
+                chunks = Spilter.word(Loader.word(file_name))
             case _:
-                logger.warning(f"[RagPipeline] 不支持的文件类型: {file_name}")
+                logger.warning(f"[RagPipeline] 不支持的文件类型: {suffix}")
                 return 0
 
         # 二、统一入库
-        # 1、与文件类型无关，chunks 已是 LangChain Document
-        # 2、双写 Milvus（向量） + ES（BM25）
-        count = Saver.save(chunks)
+        count = Saver.save(chunks, file_name)
 
         logger.info(f"[RagPipeline] 入库完成: {file_name} → {count} 个 chunk")
         return count
