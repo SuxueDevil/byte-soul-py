@@ -11,10 +11,14 @@
 
 - 中文 docstring，简洁说明用途；方法用 `Args:` / `Returns:` 标注
 - 行内注释层级编号：一、1、（用了什么 → 干什么 → 用途）
+- **单行操作只用一级**，不需要二级
 ```python
 # 一、计算文档哈希
 # 1、用 MD5 算法对文件内容取摘要，用于增量更新
 doc_hash = hashlib.md5(content).hexdigest()
+
+# 一、加载 Markdown 文件
+return UnstructuredMarkdownLoader(file_path).load()
 ```
 
 ## 代码结构
@@ -68,6 +72,22 @@ Pydantic 校验层负责非空检查,业务层**不再写兜底**：
 name = request.name or "unknown"
 # ✅ 信任 Pydantic
 name = request.name
+```
+
+## 异常处理
+
+业务层**不加 try/except**，异常自然传播到全局异常处理器（`api/handler/global_exception_handler.py`）统一捕获、记录日志、返回标准错误响应。
+
+```python
+# ❌ 业务层重复 catch
+try:
+    return UnstructuredMarkdownLoader(file_path).load()
+except Exception as e:
+    logger.error(f"加载失败: {e}")
+    return []
+
+# ✅ 异常自然传播，全局处理器兜底
+return UnstructuredMarkdownLoader(file_path).load()
 ```
 
 ## 配置管理
