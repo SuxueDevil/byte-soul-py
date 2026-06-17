@@ -97,12 +97,12 @@ rag:
   vectorstore:
     milvus_host: localhost
     milvus_port: 19530
-    collection_name: rag_embeddings
+    collection_name: bs_rag
 
   # Elasticsearch BM25 检索
   bm25:
     es_hosts: ["http://localhost:9200"]
-    index_name: rag_chunks
+    index_name: bs_rag
     ik_analyzer: ik_max_word         # 索引用 IK 粗粒度分词
     ik_search_analyzer: ik_smart     # 搜索用 IK 细粒度分词
 

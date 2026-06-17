@@ -62,12 +62,12 @@ class Settings:
         vectorstore = rag.get("vectorstore", {})
         self.milvus_host: str = vectorstore.get("milvus_host", "localhost")
         self.milvus_port: int = vectorstore.get("milvus_port", 19530)
-        self.milvus_collection: str = vectorstore.get("collection_name", "rag_embeddings")
+        self.milvus_collection: str = vectorstore.get("collection_name", "bs_rag")
 
         # Elasticsearch BM25
         bm25 = rag.get("bm25", {})
         self.es_hosts: list[str] = bm25.get("es_hosts", ["http://localhost:9200"])
-        self.es_index_name: str = bm25.get("index_name", "rag_chunks")
+        self.es_index_name: str = bm25.get("index_name", "bs_rag")
         self.es_ik_analyzer: str = bm25.get("ik_analyzer", "ik_max_word")
         self.es_ik_search_analyzer: str = bm25.get("ik_search_analyzer", "ik_smart")
 
