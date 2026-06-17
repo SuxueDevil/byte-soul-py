@@ -46,6 +46,7 @@ dependencies = [
     "sonyflake>=2.0.2",
     "asyncpg>=0.31.0",
     "unstructured>=0.23.1",
+    "markdown>=3.10.2",
 ]
 
 [tool.uv]
