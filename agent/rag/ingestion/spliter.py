@@ -23,11 +23,10 @@ class Spilter:
         """
         # 一、用 MarkdownTextSplitter 按父块大小切分
         # 1、保留标题层级（# ## ###）作为父块边界
-        parent_splitter = MarkdownTextSplitter(
+        parents = MarkdownTextSplitter(
             chunk_size=settings.rag_parent_max_size,
             chunk_overlap=0,
-        )
-        parents = parent_splitter.split_documents(documents)
+        ).split_documents(documents)
         # 二、用 RecursiveCharacterTextSplitter 把父块细切成子块
         return Spilter._build_children(parents)
 
