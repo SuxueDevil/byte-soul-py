@@ -1,8 +1,7 @@
 """入库器：把切割后的 chunk 写入 Milvus 向量库 + Elasticsearch BM25 索引"""
 from langchain_core.documents import Document
-
 from config.logger import logger
-
+from config.database import esTemplate,milvusTemplate
 
 class Saver:
     """入库器：Milvus（向量）+ Elasticsearch（BM25）双写"""
@@ -37,6 +36,7 @@ class Saver:
     def _save_to_milvus(chunks: list[Document]) -> None:
         """写入 Milvus 向量库"""
         # 一、调用向量存储 upsert 接口
+        milvusTemplate.insert(chunks)
         # 二、用 doc_hash 作为 partition key 隔离文档
         logger.debug(f"写入 Milvus: {len(chunks)} 条")
 
@@ -45,4 +45,5 @@ class Saver:
         """写入 Elasticsearch BM25 索引"""
         # 一、构造 ES 文档（content + metadata）
         # 二、bulk 写入指定索引
+        esTemplate.insert(chunks)
         logger.debug(f"写入 Elasticsearch: {len(chunks)} 条")

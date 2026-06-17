@@ -49,7 +49,6 @@ class Database:
 
 mysqlTemplate = Database()
 milvusTemplate = MilvusClient(
-    host=settings.milvus_host,
-    port=settings.milvus_port,
+    uri=f"http://{settings.milvus_host}:{settings.milvus_port}",
 )
 esTemplate = Elasticsearch(settings.es_hosts)
