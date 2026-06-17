@@ -13,21 +13,10 @@ from config.settings import settings
 
 
 class Database:
-    """MySQL 异步连接封装：创建连接池 + session 工厂"""
+    """异步数据库连接封装：创建连接池 + session 工厂"""
 
-    def __init__(self):
-        url = (
-            f"mysql+asyncmy://{settings.mysql_user}:{settings.mysql_password}@"
-            f"{settings.mysql_host}:{settings.mysql_port}/{settings.mysql_database}"
-        )
-        self.engine = create_async_engine(
-            url,
-            echo=True,
-            pool_size=settings.mysql_pool_size,
-            pool_recycle=settings.mysql_pool_recycle,
-            pool_timeout=settings.mysql_pool_timeout,
-            max_overflow=settings.mysql_max_overflow,
-        )
+    def __init__(self, url: str, **kwargs):
+        self.engine = create_async_engine(url, **kwargs)
         self.sessionmaker = async_sessionmaker(
             self.engine,
             class_=AsyncSession,
@@ -47,8 +36,26 @@ class Database:
             yield s
 
 
-mysqlTemplate = Database()
+# ─────────────────────────── MySQL ───────────────────────────
+mysqlTemplate = Database(
+    url=(
+        f"mysql+asyncmy://{settings.mysql_user}:{settings.mysql_password}@"
+        f"{settings.mysql_host}:{settings.mysql_port}/{settings.mysql_database}"
+    ),
+    echo=True,
+    pool_size=settings.mysql_pool_size,
+    pool_recycle=settings.mysql_pool_recycle,
+    pool_timeout=settings.mysql_pool_timeout,
+    max_overflow=settings.mysql_max_overflow,
+)
+
+# ─────────────────────────── PostgreSQL ───────────────────────────
+pgTemplate = Database(url=settings.rag_pg_url, echo=True)
+
+# ─────────────────────────── Milvus ───────────────────────────
 milvusTemplate = MilvusClient(
     uri=f"http://{settings.milvus_host}:{settings.milvus_port}",
 )
+
+# ─────────────────────────── Elasticsearch ───────────────────────────
 esTemplate = Elasticsearch(settings.es_hosts)

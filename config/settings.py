@@ -44,6 +44,8 @@ class Settings:
 
         # ---- RAG ----
         rag = cfg.get("rag", {})
+        # PG RAG 文档库
+        self.rag_pg_url: str = rag.get("pg_url", "")
         # 父子模式配置
         self.rag_parent_delimiter: str = rag.get("parent_delimiter", "\n\n")
         self.rag_parent_max_size: int = rag.get("parent_max_size", 2000)
