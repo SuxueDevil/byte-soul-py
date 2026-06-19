@@ -170,13 +170,19 @@ class Spilter:
         Returns:
             子块 chunk 列表
         """
-        # 一、用 RecursiveCharacterTextSplitter 按 parent_max_size 切父块
-        parent_splitter = RecursiveCharacterTextSplitter(
-            chunk_size=settings.rag_parent_max_size,
-            chunk_overlap=0,
-        )
-        parents = parent_splitter.split_documents(documents)
-        # 二、用 RecursiveCharacterTextSplitter 把父块细切成子块
+        # 一、父块切割：按分隔符切，字数兜底
+        parents = Spilter.split_by_delimiter(documents, settings.rag_parent_max_size)
+
+        # 二、检测有没有切开
+        if len(parents) <= 1:
+            # 三、没切开：按字数强制切
+            splitter = RecursiveCharacterTextSplitter(
+                chunk_size=settings.rag_parent_max_size,
+                chunk_overlap=0,
+            )
+            parents = splitter.split_documents(documents)
+
+        # 四、子块切割
         return Spilter.build_children(parents)
 
     # ─────────────────────────── 子块切割 ───────────────────────────
