@@ -6,6 +6,7 @@
 - **函数/方法**：小写 + 下划线（`load_documents`）
 - **配置项**：小写 + 下划线（`rag.chunk_size`）
 - **模块级单例**：小驼峰 + `Template` / `Service` / `Pipeline` 后缀（`mysqlTemplate` / `userService` / `ragPipeline`），对齐 Java `@Component` 风格
+- 私有方法不加_，位置在公有方法之后
 
 ## 注释规范
 
@@ -24,7 +25,29 @@ return UnstructuredMarkdownLoader(file_path).load()
 ## 代码结构
 
 - **类结构**：公有方法（私有方法在公有方法之后）
-- **条件判断**：避免大段 if else，用 early return / 枚举类 / 字典映射
+- **条件判断**：避免大段 if else，用 early return / 枚举类
+- **多方法类用分隔符**：方法之间用 `# ─────────────────────────── 名称 ───────────────────────────` 分隔，提升可读性
+
+```python
+class Spilter:
+    """文档切割器"""
+
+    # ─────────────────────────── Markdown ───────────────────────────
+    @staticmethod
+    def markdown(documents): ...
+
+    # ─────────────────────────── PDF ───────────────────────────
+    @staticmethod
+    def pdf(documents): ...
+
+    # ─────────────────────────── Word ───────────────────────────
+    @staticmethod
+    def word(documents): ...
+
+    # ─────────────────────────── 内部方法 ───────────────────────────
+    @staticmethod
+    def build_children(parents): ...
+```
 
 ## 设计模式
 
