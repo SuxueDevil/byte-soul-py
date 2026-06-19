@@ -55,6 +55,18 @@ async def get_user(user_id: int):
     return Response.success(await userService.get_user(user_id))
 ```
 
+### 响应格式：统一 JSON
+
+所有接口返回 `Response.success()`，前端统一处理：
+
+```json
+{
+  "code": 200,
+  "message": "success",
+  "data": { ... }
+}
+```
+
 ## 类型校验
 
 Pydantic 校验层负责非空检查,业务层**不再写兜底**：
