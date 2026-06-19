@@ -7,7 +7,10 @@ from langchain_text_splitters import (
     RecursiveCharacterTextSplitter,
 )
 
-from config.settings import settings
+# 切割常量
+PARENT_MAX_SIZE = 2000   # 父块最大字符数
+CHILD_MAX_SIZE = 500     # 子块最大字符数
+CHILD_OVERLAP = 50       # 子块重叠字符数
 
 
 class Spilter:
@@ -74,18 +77,18 @@ class Spilter:
         if Spilter.has_headers(documents):
             # 二、有标题：按标题切
             parents = MarkdownTextSplitter(
-                chunk_size=settings.rag_parent_max_size,
+                chunk_size=PARENT_MAX_SIZE,
                 chunk_overlap=0,
             ).split_documents(documents)
         else:
             # 三、没标题：按分隔符切
-            parents = Spilter.split_by_delimiter(documents, settings.rag_parent_max_size)
+            parents = Spilter.split_by_delimiter(documents, PARENT_MAX_SIZE)
 
         # 四、检测有没有切开
         if len(parents) <= 1:
             # 五、没切开：按字数强制切
             parents = RecursiveCharacterTextSplitter(
-                chunk_size=settings.rag_parent_max_size,
+                chunk_size=PARENT_MAX_SIZE,
                 chunk_overlap=0,
             ).split_documents(documents)
 
@@ -171,13 +174,13 @@ class Spilter:
             子块 chunk 列表
         """
         # 一、父块切割：按分隔符切，字数兜底
-        parents = Spilter.split_by_delimiter(documents, settings.rag_parent_max_size)
+        parents = Spilter.split_by_delimiter(documents, PARENT_MAX_SIZE)
 
         # 二、检测有没有切开
         if len(parents) <= 1:
             # 三、没切开：按字数强制切
             splitter = RecursiveCharacterTextSplitter(
-                chunk_size=settings.rag_parent_max_size,
+                chunk_size=PARENT_MAX_SIZE,
                 chunk_overlap=0,
             )
             parents = splitter.split_documents(documents)
@@ -199,8 +202,8 @@ class Spilter:
         # 一、用 RecursiveCharacterTextSplitter 按 child_max_size 细切子块
         # 1、相邻子块保留 overlap 维持上下文
         child_splitter = RecursiveCharacterTextSplitter(
-            chunk_size=settings.rag_child_max_size,
-            chunk_overlap=settings.rag_child_overlap,
+            chunk_size=CHILD_MAX_SIZE,
+            chunk_overlap=CHILD_OVERLAP,
         )
         children: list[Document] = []
         for parent_index, parent in enumerate(parents):

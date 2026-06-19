@@ -46,10 +46,6 @@ class Settings:
         rag = cfg.get("rag", {})
         # PG RAG 文档库
         self.rag_pg_url: str = rag.get("pg_url", "")
-        # 父子模式配置
-        self.rag_parent_max_size: int = rag.get("parent_max_size", 2000)
-        self.rag_child_max_size: int = rag.get("child_max_size", 500)
-        self.rag_child_overlap: int = rag.get("child_overlap", 50)
 
         # 嵌入模型（默认复用 LLM 配置）
         embedding = rag.get("embedding", {})

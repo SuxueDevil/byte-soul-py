@@ -35,11 +35,6 @@ rag:
   # 一、PG RAG 文档库
   pg_url: postgresql+asyncpg://user:pass@localhost:5432/rag_db  # PG 连接串
 
-  # 二、父子模式切割
-  parent_max_size: 2000                    # 父块最大字符数
-  child_max_size: 500                      # 子块最大字符数
-  child_overlap: 50                        # 子块重叠字符数
-
   # 二、嵌入模型（不填则复用 llm 配置）
   embedding:
     model: text-embedding-v3               # 模型名称
