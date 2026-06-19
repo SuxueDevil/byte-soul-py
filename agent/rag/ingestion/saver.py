@@ -1,9 +1,9 @@
-"""入库器：PG（主表）→ Milvus（向量）→ ES（索引）三库写入"""
+"""入库器：PG（ORM）→ Milvus（向量）→ ES（索引）三库写入"""
 import hashlib
 
 from langchain_core.documents import Document
-from sqlalchemy import text
 
+from api.models.rag import BSRagChunk
 from config.database import pgTemplate, milvusTemplate, esTemplate, embeddingTemplate, snowflakeTemplate
 from config.settings import settings
 from config.logger import logger
@@ -67,17 +67,20 @@ class Saver:
             if parent_index is not None and parent_index not in parent_map:
                 parent_map[parent_index] = parent_content or ""
 
-        # 二、逐个写入 PG（雪花 ID 程序生成）
+        # 二、逐个写入 PG（ORM）
         parent_pg_ids: dict[int, int] = {}
         async with pgTemplate.session() as session:
             for parent_index, content in parent_map.items():
                 pg_id = snowflakeTemplate.next_id()
-                await session.execute(
-                    text("""INSERT INTO bs_rag_chunks
-                       (id, doc_hash, file_name, content, chunk_index, parent_id, chunk_type)
-                       VALUES (:id, :doc_hash, :file_name, :content, :chunk_index, NULL, 'parent')"""),
-                    {"id": pg_id, "doc_hash": doc_hash, "file_name": file_name, "content": content, "chunk_index": parent_index},
+                chunk = BSRagChunk(
+                    id=pg_id,
+                    doc_hash=doc_hash,
+                    file_name=file_name,
+                    content=content,
+                    chunk_index=parent_index,
+                    chunk_type="parent",
                 )
+                session.add(chunk)
                 parent_pg_ids[parent_index] = pg_id
             await session.commit()
 
@@ -103,12 +106,16 @@ class Saver:
                 parent_pg_id = parent_pg_ids.get(parent_index) if parent_index is not None else None
                 pg_id = snowflakeTemplate.next_id()
 
-                await session.execute(
-                    text("""INSERT INTO bs_rag_chunks
-                       (id, doc_hash, file_name, content, chunk_index, parent_id, chunk_type)
-                       VALUES (:id, :doc_hash, :file_name, :content, :chunk_index, :parent_id, 'child')"""),
-                    {"id": pg_id, "doc_hash": doc_hash, "file_name": file_name, "content": chunk.page_content, "chunk_index": i, "parent_id": parent_pg_id},
+                child = BSRagChunk(
+                    id=pg_id,
+                    doc_hash=doc_hash,
+                    file_name=file_name,
+                    content=chunk.page_content,
+                    chunk_index=i,
+                    parent_id=parent_pg_id,
+                    chunk_type="child",
                 )
+                session.add(child)
                 child_pg_ids.append(pg_id)
             await session.commit()
 
