@@ -14,5 +14,5 @@ async def ingest(file: UploadFile = File(...)):
     @return: 入库结果
     """
     return Response.success({
-        "chunk_count": ragService.ingest(filename=file.filename, content=await file.read())
+        "chunk_count": await ragService.ingest(filename=file.filename, content=await file.read())
     })

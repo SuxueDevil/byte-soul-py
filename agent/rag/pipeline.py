@@ -14,7 +14,7 @@ from agent.rag.ingestion.saver import Saver
 class RAGPipeline:
     """RAG 管道：离线入库 + 在线检索"""
 
-    def ingest(self, file_name: str , content: str, ) -> int:
+    async def ingest(self, file_name: str , content: str, ) -> int:
         """离线入库流程
 
         Args:
@@ -43,7 +43,7 @@ class RAGPipeline:
                 return 0
 
         # 三、统一入库
-        count = Saver.save(chunks, file_name)
+        count = await Saver.save(chunks, file_name)
 
         logger.info(f"[RagPipeline] 入库完成: {file_name} → {count} 个 chunk")
         return count

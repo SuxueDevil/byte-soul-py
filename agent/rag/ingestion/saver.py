@@ -2,16 +2,18 @@
 import hashlib
 
 from langchain_core.documents import Document
+from sqlalchemy import text
 
 from config.database import pgTemplate, milvusTemplate, esTemplate, embeddingTemplate, snowflakeTemplate
 from config.settings import settings
 from config.logger import logger
 
+
 class Saver:
     """入库器：父子模式，PG 写父块+子块，Milvus/ES 只写子块"""
 
     @staticmethod
-    def save(chunks: list[Document], file_name: str) -> int:
+    async def save(chunks: list[Document], file_name: str) -> int:
         """入库 chunk
 
         Args:
@@ -28,10 +30,10 @@ class Saver:
         logger.info(f"[Saver] 开始入库: {file_name} doc_hash={doc_hash} 子块={len(chunks)}")
 
         # 一、提取父块，写入 PG
-        parent_pg_ids = Saver._save_parents_to_pg(chunks, doc_hash, file_name)
+        parent_pg_ids = await Saver._save_parents_to_pg(chunks, doc_hash, file_name)
 
         # 二、子块写入 PG，拿到 pg_id 列表
-        child_pg_ids = Saver._save_children_to_pg(chunks, doc_hash, file_name, parent_pg_ids)
+        child_pg_ids = await Saver._save_children_to_pg(chunks, doc_hash, file_name, parent_pg_ids)
 
         # 三、子块生成 embedding，写入 Milvus
         Saver._save_to_milvus(chunks, child_pg_ids, doc_hash)
@@ -49,7 +51,7 @@ class Saver:
         return hashlib.md5(content.encode()).hexdigest()
 
     @staticmethod
-    def _save_parents_to_pg(
+    async def _save_parents_to_pg(
         chunks: list[Document], doc_hash: str, file_name: str
     ) -> dict[int, int]:
         """提取父块并写入 PG
@@ -67,23 +69,23 @@ class Saver:
 
         # 二、逐个写入 PG（雪花 ID 程序生成）
         parent_pg_ids: dict[int, int] = {}
-        with pgTemplate.session() as session:
+        async with pgTemplate.session() as session:
             for parent_index, content in parent_map.items():
                 pg_id = snowflakeTemplate.next_id()
-                session.execute(
-                    """INSERT INTO bs_rag_chunks
+                await session.execute(
+                    text("""INSERT INTO bs_rag_chunks
                        (id, doc_hash, file_name, content, chunk_index, parent_id, chunk_type)
-                       VALUES (%s, %s, %s, %s, %s, NULL, 'parent')""",
-                    (pg_id, doc_hash, file_name, content, parent_index),
+                       VALUES (:id, :doc_hash, :file_name, :content, :chunk_index, NULL, 'parent')"""),
+                    {"id": pg_id, "doc_hash": doc_hash, "file_name": file_name, "content": content, "chunk_index": parent_index},
                 )
                 parent_pg_ids[parent_index] = pg_id
-            session.commit()
+            await session.commit()
 
         logger.info(f"[Saver] 父块入库: {len(parent_pg_ids)} 个")
         return parent_pg_ids
 
     @staticmethod
-    def _save_children_to_pg(
+    async def _save_children_to_pg(
         chunks: list[Document],
         doc_hash: str,
         file_name: str,
@@ -95,20 +97,20 @@ class Saver:
             子块 pg_id 列表（与 chunks 顺序对应）
         """
         child_pg_ids: list[int] = []
-        with pgTemplate.session() as session:
+        async with pgTemplate.session() as session:
             for i, chunk in enumerate(chunks):
                 parent_index = chunk.metadata.get("parent_index")
                 parent_pg_id = parent_pg_ids.get(parent_index) if parent_index is not None else None
                 pg_id = snowflakeTemplate.next_id()
 
-                session.execute(
-                    """INSERT INTO bs_rag_chunks
+                await session.execute(
+                    text("""INSERT INTO bs_rag_chunks
                        (id, doc_hash, file_name, content, chunk_index, parent_id, chunk_type)
-                       VALUES (%s, %s, %s, %s, %s, %s, 'child')""",
-                    (pg_id, doc_hash, file_name, chunk.page_content, i, parent_pg_id),
+                       VALUES (:id, :doc_hash, :file_name, :content, :chunk_index, :parent_id, 'child')"""),
+                    {"id": pg_id, "doc_hash": doc_hash, "file_name": file_name, "content": chunk.page_content, "chunk_index": i, "parent_id": parent_pg_id},
                 )
                 child_pg_ids.append(pg_id)
-            session.commit()
+            await session.commit()
 
         logger.info(f"[Saver] 子块入库: {len(child_pg_ids)} 个")
         return child_pg_ids

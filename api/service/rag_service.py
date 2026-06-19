@@ -5,7 +5,7 @@ from agent.rag.pipeline import ragPipeline
 class RagService:
     """RAG 服务层"""
 
-    def ingest(self, filename: str, content: bytes) -> int:
+    async def ingest(self, filename: str, content: bytes) -> int:
         """文档入库
 
         Args:
@@ -15,7 +15,7 @@ class RagService:
         Returns:
             入库的 chunk 数量
         """
-        return ragPipeline.ingest(filename, content.decode("utf-8"))
+        return await ragPipeline.ingest(filename, content.decode("utf-8"))
 
 
 ragService = RagService()
