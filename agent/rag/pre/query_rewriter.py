@@ -8,18 +8,21 @@ from langchain_core.messages import SystemMessage, HumanMessage
 class QueryRewriter:
     """查询改写器：将口语化问题转为正式检索词"""
 
-    def rewrite(self, query: str) -> str:
+    def rewrite(self, query: str, keywords: list[str]) -> str:
         """改写查询
 
         Args:
             query: 原始查询
+            keywords: IK 分词提取的关键词
 
         Returns:
             改写后的查询，如果改写失败返回原始查询
         """
         try:
+            # 一、构造提示词：原始查询 + 关键词
+            prompt = f"{REWRITE_PROMPT}\n\n关键词：{', '.join(keywords)}"
             response = llmNoStreamTemplate.invoke([
-                SystemMessage(content=REWRITE_PROMPT),
+                SystemMessage(content=prompt),
                 HumanMessage(content=query),
             ])
             # 当前模型只返 str,type: ignore 抑制 Pylance 警告(类型声明是 str | list)

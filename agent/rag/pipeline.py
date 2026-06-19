@@ -5,6 +5,7 @@ from langchain_core.documents import Document
 
 from config.logger import logger
 
+from agent.rag.pre.ik_tokenize import ikTokenizer
 from agent.rag.pre.query_rewriter import queryRewriter
 from agent.rag.pre.query_expansion import queryExpander
 from agent.rag.ingestion.spliter import Spilter
@@ -60,10 +61,13 @@ class RAGPipeline:
         logger.info(f"[RagPipeline] 开始检索: {question}")
 
         # 一、检索前：查询优化
-        # 1、queryRewriter / queryExpander 是无状态工具，直接 import 用
-        rewritten = queryRewriter.rewrite(question)
+        # 1、IK 提取关键词，辅助 LLM 改写
+        keywords = ikTokenizer.extract_keywords(question)
+        # 2、LLM 改写（传入关键词辅助）
+        rewritten = queryRewriter.rewrite(question, keywords)
+        # 3、查询扩展
         queries = queryExpander.expand(rewritten)
-        logger.info(f"[RagPipeline] 检索前完成")
+        logger.info(f"[RagPipeline] 检索前完成: keywords={keywords}")
 
         # 二、检索中：多路检索
         vector_docs = vector_retriever.search(queries)
