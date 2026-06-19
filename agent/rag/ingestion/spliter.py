@@ -27,8 +27,16 @@ class Spilter:
             chunk_size=settings.rag_parent_max_size,
             chunk_overlap=0,
         ).split_documents(documents)
-        # 二、用 RecursiveCharacterTextSplitter 把父块细切成子块
-        return Spilter._build_children(parents)
+        # 二、去重：过滤掉内容完全相同的父块
+        seen = set()
+        unique_parents = []
+        for parent in parents:
+            content_key = parent.page_content.strip()
+            if content_key not in seen:
+                seen.add(content_key)
+                unique_parents.append(parent)
+        # 三、用 RecursiveCharacterTextSplitter 把父块细切成子块
+        return Spilter._build_children(unique_parents)
 
     @staticmethod
     def pdf(documents: list[Document]) -> list[Document]:
@@ -80,7 +88,7 @@ class Spilter:
         """子块构建：把父块细切成子块，注入父块元数据
 
         Args:
-            parents: 父块 Document 列表
+            parents: 父块 Document 列表（已去重）
 
         Returns:
             子块 Document 列表

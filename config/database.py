@@ -60,15 +60,26 @@ pgTemplate = Database(url=settings.rag_pg_url, echo=True)
 milvusTemplate = MilvusClient(
     uri=f"http://{settings.milvus_host}:{settings.milvus_port}",
 )
+milvusTemplate.load_collection(collection_name=settings.milvus_collection)
 
 # ─────────────────────────── Elasticsearch ───────────────────────────
 esTemplate = Elasticsearch(settings.es_hosts)
 
 # ─────────────────────────── Embedding ───────────────────────────
+"""
+对，chunk_size=10 会自动分批。OpenAIEmbeddings 内部逻辑是：
+17 条文本 → 按 chunk_size=10 分成两批
+  第一批：10 条 → API → 返回 10 个向量
+  第二批：7 条 → API → 返回 7 个向量
+合并 → 返回 17 个向量
+"""
 embeddingTemplate = OpenAIEmbeddings(
     model=settings.embedding_model,
     api_key=settings.embedding_api_key,
     base_url=settings.embedding_base_url,
+    tiktoken_enabled=False,
+    check_embedding_ctx_length=False,
+    chunk_size=10,
 )
 
 # ─────────────────────────── LLM ───────────────────────────

@@ -7,6 +7,7 @@ from api.models.rag import BSRagChunk
 from config.database import pgTemplate, milvusTemplate, esTemplate, embeddingTemplate, snowflakeTemplate
 from config.settings import settings
 from config.logger import logger
+from sqlalchemy import select, delete
 
 
 class Saver:
@@ -29,16 +30,19 @@ class Saver:
         doc_hash = Saver._calc_doc_hash(chunks)
         logger.info(f"[Saver] 开始入库: {file_name} doc_hash={doc_hash} 子块={len(chunks)}")
 
-        # 一、提取父块，写入 PG
+        # 一、去重：doc_hash 已存在则三库联删
+        await Saver._delete_if_exists(doc_hash)
+
+        # 二、提取父块，写入 PG
         parent_pg_ids = await Saver._save_parents_to_pg(chunks, doc_hash, file_name)
 
-        # 二、子块写入 PG，拿到 pg_id 列表
+        # 三、子块写入 PG，拿到 pg_id 列表
         child_pg_ids = await Saver._save_children_to_pg(chunks, doc_hash, file_name, parent_pg_ids)
 
-        # 三、子块生成 embedding，写入 Milvus
+        # 四、子块生成 embedding，写入 Milvus
         Saver._save_to_milvus(chunks, child_pg_ids, doc_hash)
 
-        # 四、子块写入 ES
+        # 五、子块写入 ES
         Saver._save_to_es(chunks, child_pg_ids, doc_hash)
 
         logger.info(f"[Saver] 入库完成: {file_name} → {len(child_pg_ids)} 个子块")
@@ -49,6 +53,41 @@ class Saver:
         """计算文档哈希（所有子块内容拼接后取 MD5）"""
         content = "".join(c.page_content for c in chunks)
         return hashlib.md5(content.encode()).hexdigest()
+
+    @staticmethod
+    async def _delete_if_exists(doc_hash: str) -> None:
+        """doc_hash 已存在则三库联删"""
+        async with pgTemplate.session() as session:
+            result = await session.execute(
+                select(BSRagChunk.id).where(BSRagChunk.doc_hash == doc_hash)
+            )
+            pg_ids = [row[0] for row in result.fetchall()]
+
+        if not pg_ids:
+            return
+
+        logger.info(f"[Saver] 检测到重复文档 doc_hash={doc_hash}，删除旧数据: {len(pg_ids)} 条")
+
+        # 一、PG 删除
+        async with pgTemplate.session() as session:
+            await session.execute(
+                delete(BSRagChunk).where(BSRagChunk.doc_hash == doc_hash)
+            )
+            await session.commit()
+
+        # 二、Milvus 删除
+        milvusTemplate.delete(
+            collection_name=settings.milvus_collection,
+            filter=f'doc_hash == "{doc_hash}"',
+        )
+
+        # 三、ES 删除
+        str_ids = [str(i) for i in pg_ids]
+        for pg_id in str_ids:
+            try:
+                esTemplate.delete(index=settings.es_index_name, id=pg_id)
+            except Exception:
+                pass
 
     @staticmethod
     async def _save_parents_to_pg(
