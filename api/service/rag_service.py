@@ -1,24 +1,21 @@
 """RAG 服务：文件上传入库"""
-from agent.rag.pipeline import RAGPipeline, ragPipeline
-from api.schemas.rag import FileDTO
+from agent.rag.pipeline import ragPipeline
 
 
 class RagService:
     """RAG 服务层"""
 
-    def __init__(self, pipeline: RAGPipeline) -> None:
-        self.pipeline = pipeline
+    def ingest(self, filename: str, content: bytes) -> int:
+        """文档入库
 
-    def ingest(self, file: FileDTO) -> int:
+        Args:
+            filename: 文件名
+            content: 文件内容（bytes）
+
+        Returns:
+            入库的 chunk 数量
         """
-        文档入库。
-        @param file: 文件数据
-        @return: 入库的 chunk 数量
-        """
-        # 一、字节转文本
-        text = file.content.decode("utf-8")
-        # 二、调用管道入库
-        return self.pipeline.ingest(text, file.filename)
+        return ragPipeline.ingest(filename, content.decode("utf-8"))
 
 
-ragService = RagService(ragPipeline)
+ragService = RagService()

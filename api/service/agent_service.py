@@ -3,7 +3,6 @@ import time
 import uuid
 
 from langchain_core.messages import HumanMessage, AIMessage
-from langgraph.graph.state import CompiledStateGraph
 
 from agent.builder import agent
 from api.schemas.chat import ChatChunk, ChatRequest
@@ -17,9 +16,6 @@ _ROLE_MAP = {
 
 class AgentService:
     """Agent 服务层：接收 OpenAI 请求，返回 OpenAI 格式的流式 ChatChunk"""
-
-    def __init__(self, agent: CompiledStateGraph) -> None:
-        self.agent = agent
 
     def _to_lc_messages(self, messages: list[ChatRequest.Message]):
         """将 OpenAI 消息列表转为 LangChain 消息
@@ -49,7 +45,7 @@ class AgentService:
         first_chunk = True
 
         # 三、流式执行
-        async for event in self.agent.astream_events(
+        async for event in agent.astream_events(
             {"messages": self._to_lc_messages(request.messages)},
             config,
             version="v2",
@@ -79,4 +75,4 @@ class AgentService:
         )
 
 
-agentService = AgentService(agent)
+agentService = AgentService()

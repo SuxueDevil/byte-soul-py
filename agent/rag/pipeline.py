@@ -1,11 +1,12 @@
 """RAG 管道：串联全部核心步骤"""
 from pathlib import Path
 
+from langchain_core.documents import Document
+
 from config.logger import logger
 
 from agent.rag.pre.query_rewriter import queryRewriter
 from agent.rag.pre.query_expansion import queryExpander
-from agent.rag.ingestion.loader import Loader
 from agent.rag.ingestion.spliter import Spilter
 from agent.rag.ingestion.saver import Saver
 
@@ -13,7 +14,7 @@ from agent.rag.ingestion.saver import Saver
 class RAGPipeline:
     """RAG 管道：离线入库 + 在线检索"""
 
-    def ingest(self, content: str, file_name: str) -> int:
+    def ingest(self, file_name: str , content: str, ) -> int:
         """离线入库流程
 
         Args:
@@ -25,20 +26,23 @@ class RAGPipeline:
         """
         logger.info(f"[RagPipeline] 开始入库: {file_name}")
 
-        # 一、按文件扩展名匹配加载+切割
+        # 一、直接把内容转成 Document
+        doc = Document(page_content=content, metadata={"source": file_name})
+
+        # 二、按扩展名切割
         suffix = Path(file_name).suffix.lower()
         match suffix:
-            case ".md" | ".markdown":
-                chunks = Spilter.markdown(Loader.markdown(file_name))
+            case ".md" | ".markdown" | ".txt":
+                chunks = Spilter.markdown([doc])
             case ".pdf":
-                chunks = Spilter.pdf(Loader.pdf(file_name))
+                chunks = Spilter.pdf([doc])
             case ".docx" | ".word":
-                chunks = Spilter.word(Loader.word(file_name))
+                chunks = Spilter.word([doc])
             case _:
                 logger.warning(f"[RagPipeline] 不支持的文件类型: {suffix}")
                 return 0
 
-        # 二、统一入库
+        # 三、统一入库
         count = Saver.save(chunks, file_name)
 
         logger.info(f"[RagPipeline] 入库完成: {file_name} → {count} 个 chunk")

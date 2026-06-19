@@ -42,14 +42,6 @@ return UnstructuredMarkdownLoader(file_path).load()
 mysqlTemplate = Database()
 milvusTemplate = MilvusClient(host=..., port=...)
 esTemplate = Elasticsearch(hosts=[...])
-
-# api/service/user_service.py
-class UserService:
-    def __init__(self, database: Database) -> None:
-        self.database = database
-
-userService = UserService(mysqlTemplate)
-
 ```
 
 ### 路由：直接 import
