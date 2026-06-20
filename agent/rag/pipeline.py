@@ -3,6 +3,7 @@ from pathlib import Path
 
 from langchain_core.documents import Document
 
+from agent.rag.mid import retriever
 from config.logger import logger
 
 from agent.rag.pre.ik_tokenize import ikTokenizer
@@ -70,8 +71,8 @@ class RAGPipeline:
         logger.info(f"[RagPipeline] 检索前完成: keywords={keywords}")
 
         # 二、检索中：多路检索
-        vector_docs = vector_retriever.search(queries)
-        bm25_docs = bm25_retriever.search(queries)
+        vector_docs = retriever.vector_search(queries)
+        bm25_docs = retriever.bm25_search(queries)
         logger.info(
             f"[RagPipeline] 检索中完成: 向量 {len(vector_docs)} 条, BM25 {len(bm25_docs)} 条")
 
