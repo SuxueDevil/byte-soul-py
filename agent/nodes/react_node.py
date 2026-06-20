@@ -15,77 +15,6 @@ MAX_ITERATIONS = 3
 # 工具名称列表
 TOOL_NAMES = [t.name for t in tools]
 
-
-def parse_action(text: str) -> tuple[str, str] | None:
-    """从 LLM 输出中解析 Action 和 Action Input
-
-    Args:
-        text: LLM 输出文本
-
-    Returns:
-        (action, action_input) 或 None
-    """
-    action_match = re.search(r"Action:\s*(.+?)(?:\n|$)", text)
-    input_match = re.search(r"Action Input:\s*(.+?)(?:\n|$)", text)
-
-    if action_match and input_match:
-        action = action_match.group(1).strip()
-        action_input = input_match.group(1).strip()
-        return action, action_input
-    return None
-
-
-def parse_final_answer(text: str) -> str | None:
-    """从 LLM 输出中解析 Final Answer
-
-    Args:
-        text: LLM 输出文本
-
-    Returns:
-        最终答案或 None
-    """
-    match = re.search(r"Final Answer:\s*(.+)", text, re.DOTALL)
-    if match:
-        return match.group(1).strip()
-    return None
-
-
-def execute_tool(action: str, action_input: str) -> str:
-    """执行工具调用
-
-    Args:
-        action: 工具名称
-        action_input: 工具参数（JSON 字符串）
-
-    Returns:
-        工具执行结果
-    """
-    tool_map = {t.name: t for t in tools}
-    tool = tool_map.get(action)
-    if not tool:
-        return f"错误：未知工具 '{action}'，可用工具: {TOOL_NAMES}"
-
-    try:
-        params = json.loads(action_input)
-        return tool.invoke(params)
-    except json.JSONDecodeError:
-        return tool.invoke({"query": action_input})
-    except Exception as e:
-        return f"工具执行失败: {str(e)}"
-
-
-def build_tools_description() -> str:
-    """构建工具描述文本，用于 Prompt
-
-    Returns:
-        工具描述字符串
-    """
-    lines = []
-    for tool in tools:
-        lines.append(f"- {tool.name}: {tool.description}")
-    return "\n".join(lines)
-
-
 async def react_node_stream(state):
     """ReAct 节点：自主推理 + 工具调用循环，SSE 流式输出
 
@@ -107,9 +36,9 @@ async def react_node_stream(state):
         state.current_node = "react"
         return
 
-    # 二、构建 ReAct Prompt
-    tools_desc = build_tools_description()
-    system_prompt = REACT_PROMPT.format(tools=tools_desc)
+        # 二、构建 ReAct Prompt
+        tools_desc = "\n".join([f"- {t.name}: {t.description}" for t in tools])
+        system_prompt = REACT_PROMPT.format(tools=tools_desc)
 
     # 三、ReAct 循环
     conversation: list[BaseMessage] = []
@@ -184,3 +113,60 @@ async def react_node(state):
         if event["type"] == "answer":
             logger.info(f"[ReactNode] 最终答案: {event['content'][:100]}...")
     return state
+
+def parse_action(text: str) -> tuple[str, str] | None:
+    """从 LLM 输出中解析 Action 和 Action Input
+
+    Args:
+        text: LLM 输出文本
+
+    Returns:
+        (action, action_input) 或 None
+    """
+    action_match = re.search(r"Action:\s*(.+?)(?:\n|$)", text)
+    input_match = re.search(r"Action Input:\s*(.+?)(?:\n|$)", text)
+
+    if action_match and input_match:
+        action = action_match.group(1).strip()
+        action_input = input_match.group(1).strip()
+        return action, action_input
+    return None
+
+
+def parse_final_answer(text: str) -> str | None:
+    """从 LLM 输出中解析 Final Answer
+
+    Args:
+        text: LLM 输出文本
+
+    Returns:
+        最终答案或 None
+    """
+    match = re.search(r"Final Answer:\s*(.+)", text, re.DOTALL)
+    if match:
+        return match.group(1).strip()
+    return None
+
+
+def execute_tool(action: str, action_input: str) -> str:
+    """执行工具调用
+
+    Args:
+        action: 工具名称
+        action_input: 工具参数（JSON 字符串）
+
+    Returns:
+        工具执行结果
+    """
+    tool_map = {t.name: t for t in tools}
+    tool = tool_map.get(action)
+    if not tool:
+        return f"错误：未知工具 '{action}'，可用工具: {TOOL_NAMES}"
+
+    try:
+        params = json.loads(action_input)
+        return tool.invoke(params)
+    except json.JSONDecodeError:
+        return tool.invoke({"query": action_input})
+    except Exception as e:
+        return f"工具执行失败: {str(e)}"
