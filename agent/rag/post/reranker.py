@@ -7,9 +7,6 @@ from config.logger import logger
 class Reranker:
     """重排序器：Cross-Encoder 精排"""
 
-    def __init__(self):
-        self.model = CrossEncoder(settings.reranker_model)
-
     # ─────────────────────────── 重排序 ───────────────────────────
     def rerank(self, query: str, chunks: list[dict], top_k: int = 5) -> list[dict]:
         """重排序：用 Cross-Encoder 对 query-chunk 对打分
@@ -29,7 +26,7 @@ class Reranker:
         pairs = [(query, chunk.get("content", "")) for chunk in chunks]
 
         # 二、Cross-Encoder 打分
-        scores = self.model.predict(pairs)
+        scores = CrossEncoder(settings.reranker_model).predict(pairs)
 
         # 三、合并分数，按 rerank_score 降序
         for i, chunk in enumerate(chunks):
