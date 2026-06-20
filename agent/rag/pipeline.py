@@ -4,7 +4,8 @@ from pathlib import Path
 from langchain_core.documents import Document
 
 from agent.rag.mid import retriever
-from agent.rag.post import fusion, reranker
+from agent.rag.post import rrf_fuser, reranker
+from config.database import settings
 from config.logger import logger
 
 from agent.rag.pre.ik_tokenize import ikTokenizer
@@ -75,13 +76,13 @@ class RAGPipeline:
 
         # 二、检索中：多路检索
         vector_docs = retriever.vector_search(queries)
-        bm25_docs = retriever.bm25_search(queries)
+        bm25_docs = retriever.bm25_search(queries) if settings.rag_enable_bm25 else []
         logger.info(
             f"[RagPipeline] 检索中完成: 向量 {len(vector_docs)} 条, BM25 {len(bm25_docs)} 条")
 
         # 三、检索后：融合与重排序
         # 1、融合
-        fused = fusion.fuse(vector_docs, bm25_docs)
+        fused = rrf_fuser.fuse(vector_docs, bm25_docs)
         # 父子替换：子块命中后，用父块的完整内容替换子块的精简内容
         fused = self.replace_with_parent_context(fused)
         # 2、重排序
