@@ -14,7 +14,6 @@ from config.logger import logger
 # 0、验证DB连接
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    from config.database import mysqlTemplate, milvusTemplate, esTemplate
     logger.info("ByteSoul 启动中...")
     logger.info(f"MySQL 已连接成功 ({settings.mysql_host}:{settings.mysql_port})")
     logger.info(f"Milvus 已连接成功 ({settings.milvus_host}:{settings.milvus_port})")

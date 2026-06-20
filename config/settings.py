@@ -46,6 +46,11 @@ class Settings:
         rag = cfg.get("rag", {})
         # PG RAG 文档库
         self.rag_pg_url: str = rag.get("pg_url", "")
+        # Neo4j 知识图谱
+        neo4j = rag.get("neo4j", {})
+        self.neo4j_uri: str = neo4j.get("uri", "bolt://localhost:7687")
+        self.neo4j_user: str = neo4j.get("user", "neo4j")
+        self.neo4j_password: str = neo4j.get("password", "password")
 
         # 嵌入模型（默认复用 LLM 配置）
         embedding = rag.get("embedding", {})

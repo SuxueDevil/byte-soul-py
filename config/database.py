@@ -1,9 +1,10 @@
-"""数据库、搜索引擎、LLM、Embedding、雪花ID 客户端"""
+"""数据库、搜索引擎、LLM、Embedding、雪花ID、Neo4j 客户端"""
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 
 from elasticsearch import Elasticsearch
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
+from neo4j import GraphDatabase
 from pydantic import SecretStr
 from pymilvus import MilvusClient
 from sonyflake import Sonyflake
@@ -103,4 +104,10 @@ llmNoStreamTemplate = ChatOpenAI(
 snowflakeTemplate = Sonyflake(
     start_time=datetime(2024, 1, 1, tzinfo=timezone.utc),
     machine_id=1,
+)
+
+# ─────────────────────────── Neo4j ───────────────────────────
+neo4jTemplate = GraphDatabase.driver(
+    settings.neo4j_uri,
+    auth=(settings.neo4j_user, settings.neo4j_password),
 )

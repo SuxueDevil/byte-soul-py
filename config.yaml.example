@@ -35,7 +35,13 @@ rag:
   # 一、PG RAG 文档库
   pg_url: postgresql+asyncpg://user:pass@localhost:5432/rag_db  # PG 连接串
 
-  # 二、嵌入模型（不填则复用 llm 配置）
+  # 二、Neo4j 知识图谱
+  neo4j:
+    uri: bolt://localhost:7687
+    user: neo4j
+    password: password
+
+  # 三、嵌入模型（不填则复用 llm 配置）
   embedding:
     model: text-embedding-v3               # 模型名称
     dimensions: 1024                       # 向量维度
