@@ -8,28 +8,29 @@ class Retriever:
     """多路检索器：向量检索 + BM25 检索"""
 
     # ─────────────────────────── 向量检索 ───────────────────────────
-    def vector_search(self, queries: list[str], top_k: int = None) -> list[dict]:
+    def vector_search(self, queries: list[str]) -> list[dict]:
         """向量检索：查询文本 → embedding → Milvus
 
         Args:
             queries: 查询文本列表
-            top_k: 每个 query 返回数量，默认从配置读取
 
         Returns:
             [{pg_id, score, source}, ...]
         """
-        if top_k is None:
-            top_k = settings.retrieval_top_k
+
         all_hits = []
         for query in queries:
+            # 一、查询文本转向量
             vector = embeddingTemplate.embed_query(query)
-            results = milvusTemplate.search(
+            # 二、Milvus 向量检索
+            res = milvusTemplate.search(
                 collection_name=settings.milvus_collection,
                 data=[vector],
-                limit=top_k,
+                limit=settings.retrieval_top_k,
                 output_fields=["pg_id"],
             )
-            for hit in results[0]:
+            # 三、提取结果
+            for hit in res[0]:
                 entity = hit.get("entity", {})
                 all_hits.append({
                     "pg_id": entity.get("pg_id"),
@@ -39,26 +40,26 @@ class Retriever:
         return self.dedup(all_hits)
 
     # ─────────────────────────── BM25 检索 ───────────────────────────
-    def bm25_search(self, queries: list[str], top_k: int = None) -> list[dict]:
+    def bm25_search(self, queries: list[str]) -> list[dict]:
         """BM25 检索：查询文本 → ES 关键词匹配
 
         Args:
             queries: 查询文本列表
-            top_k: 每个 query 返回数量，默认从配置读取
 
         Returns:
             [{pg_id, score, source}, ...]
         """
-        if top_k is None:
-            top_k = settings.retrieval_top_k
         all_hits = []
         for query in queries:
+            # 一、构造 ES 查询（IK 分词）
             body = {
                 "query": {"match": {"content": {"query": query, "analyzer": settings.es_ik_search_analyzer}}},
-                "size": top_k,
+                "size": settings.retrieval_top_k
             }
-            resp = esTemplate.search(index=settings.es_index_name, body=body)
-            for hit in resp.get("hits", {}).get("hits", []):
+            # 二、ES 检索
+            res = esTemplate.search(index=settings.es_index_name, body=body)
+            # 三、提取结果
+            for hit in res.get("hits", {}).get("hits", []):
                 all_hits.append({
                     "pg_id": hit.get("_source", {}).get("pg_id"),
                     "score": hit.get("_score", 0.0),
