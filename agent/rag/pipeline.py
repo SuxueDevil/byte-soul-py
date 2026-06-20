@@ -4,7 +4,7 @@ from pathlib import Path
 from langchain_core.documents import Document
 
 from agent.rag.mid import retriever
-from agent.rag.post import rrf_fuser, reranker
+from agent.rag.post import fusion, reranker
 from config.logger import logger
 
 from agent.rag.pre.ik_tokenize import ikTokenizer
@@ -81,12 +81,13 @@ class RAGPipeline:
 
         # 三、检索后：融合与重排序
         # 1、融合
-        fused = rrf_fuser.fuse(vector_docs, bm25_docs)
+        fused = fusion.fuse(vector_docs, bm25_docs)
         # 父子替换：子块命中后，用父块的完整内容替换子块的精简内容
         fused = self.replace_with_parent_context(fused)
         # 2、重排序
         results = reranker.rerank(question, fused)
         logger.info(f"[RagPipeline] 检索后完成: {len(results)} 条结果")
+        return results
 
     def replace_with_parent_context(self, docs: list[dict]) -> list[dict]:
         """父子模式：用父块内容替换子块内容
