@@ -4,6 +4,7 @@ from pathlib import Path
 from langchain_core.documents import Document
 
 from agent.rag.mid import retriever
+from agent.rag.post import rrf_fuser, reranker
 from config.logger import logger
 
 from agent.rag.pre.ik_tokenize import ikTokenizer
@@ -16,6 +17,7 @@ from agent.rag.ingestion.saver import Saver
 class RAGPipeline:
     """RAG 管道：离线入库 + 在线检索"""
 
+    # ─────────────────────────── 离线 ───────────────────────────
     async def ingest(self, file_name: str , content: str, ) -> int:
         """离线入库流程
 
@@ -50,6 +52,7 @@ class RAGPipeline:
         logger.info(f"[RagPipeline] 入库完成: {file_name} → {count} 个 chunk")
         return count
 
+    # ─────────────────────────── 在线 ───────────────────────────
     def query(self, question: str) -> str:
         """在线检索流程
 
@@ -77,16 +80,13 @@ class RAGPipeline:
             f"[RagPipeline] 检索中完成: 向量 {len(vector_docs)} 条, BM25 {len(bm25_docs)} 条")
 
         # 三、检索后：融合与重排序
+        # 1、融合
         fused = rrf_fuser.fuse(vector_docs, bm25_docs)
-        # ？
+        # 父子替换：子块命中后，用父块的完整内容替换子块的精简内容
         fused = self.replace_with_parent_context(fused)
+        # 2、重排序
         results = reranker.rerank(question, fused)
         logger.info(f"[RagPipeline] 检索后完成: {len(results)} 条结果")
-
-        # 四、生成回答
-        answer = self.generate(question, results)
-        logger.info("[RagPipeline] 回答生成完成")
-        return answer
 
     def replace_with_parent_context(self, docs: list[dict]) -> list[dict]:
         """父子模式：用父块内容替换子块内容
