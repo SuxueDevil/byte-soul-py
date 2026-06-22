@@ -64,7 +64,9 @@ milvusTemplate = MilvusClient(
 milvusTemplate.load_collection(collection_name=settings.milvus_collection)
 
 # ─────────────────────────── Elasticsearch ───────────────────────────
-esTemplate = Elasticsearch(settings.es_hosts)
+# TODO 临时修改 esTemplate = Elasticsearch(settings.es_hosts)
+esTemplate = None
+
 
 # ─────────────────────────── Embedding ───────────────────────────
 """

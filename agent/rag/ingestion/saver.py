@@ -43,8 +43,8 @@ class Saver:
         # 四、子块生成 embedding，写入 Milvus
         Saver.save_to_milvus(chunks, child_pg_ids, doc_hash)
 
-        # 五、子块写入 ES
-        Saver.save_to_es(chunks, child_pg_ids, doc_hash)
+        # 五、子块写入 ES TODO，测试暂时关闭
+        # Saver.save_to_es(chunks, child_pg_ids, doc_hash)
 
         logger.info(f"[Saver] 入库完成: {file_name} → {len(child_pg_ids)} 个子块")
         return len(child_pg_ids)
